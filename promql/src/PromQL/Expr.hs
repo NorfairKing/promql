@@ -385,21 +385,21 @@ data Duration
 -- | Prometheus reads a duration into a 64-bit count of nanoseconds, so one
 -- longer than that span is not a duration it has anywhere to put.  The bounds
 -- are per unit because that is how one is written.
+-- Written without 'genericValidate': every field here is a 'Word' or a
+-- 'Text', whose validity is trivial, so it would add nothing and the mutation
+-- testing says as much.
 instance Validity Duration where
   validate duration =
-    mconcat
-      [ genericValidate duration,
-        declare "the duration is one Prometheus has somewhere to put" $
-          case duration of
-            Milliseconds n -> n <= 9223372036854
-            Seconds n -> n <= 9223372036
-            Minutes n -> n <= 153722867
-            Hours n -> n <= 2562047
-            Days n -> n <= 106751
-            Weeks n -> n <= 15250
-            Years n -> n <= 292
-            DurationVariable _ -> True
-      ]
+    declare "the duration is one Prometheus has somewhere to put" $
+      case duration of
+        Milliseconds n -> n <= 9223372036854
+        Seconds n -> n <= 9223372036
+        Minutes n -> n <= 153722867
+        Hours n -> n <= 2562047
+        Days n -> n <= 106751
+        Weeks n -> n <= 15250
+        Years n -> n <= 292
+        DurationVariable _ -> True
 
 -- | A label's name, which Prometheus spells like an identifier.
 --
@@ -416,11 +416,8 @@ newtype LabelName = LabelName {unLabelName :: Text}
 
 instance Validity LabelName where
   validate name =
-    mconcat
-      [ genericValidate name,
-        declare "the name is one Prometheus will read as a label name" $
-          isIdentifier (unLabelName name)
-      ]
+    declare "the name is one Prometheus will read as a label name" $
+      isIdentifier (unLabelName name)
 
 -- | A label name, or nothing where the text is not one.
 labelName :: Text -> Maybe LabelName
@@ -433,11 +430,8 @@ newtype MetricName = MetricName {unMetricName :: Text}
 
 instance Validity MetricName where
   validate name =
-    mconcat
-      [ genericValidate name,
-        declare "the name is one Prometheus will read as a metric name" $
-          isMetricIdentifier (unMetricName name)
-      ]
+    declare "the name is one Prometheus will read as a metric name" $
+      isMetricIdentifier (unMetricName name)
 
 metricName :: Text -> Maybe MetricName
 metricName text = constructValid (MetricName text)

@@ -18,6 +18,10 @@ module PromQL.Render
     renderDuration,
     renderNumber,
     queryWidth,
+    precedence,
+    operatorPrecedence,
+    lowestPrecedence,
+    atomPrecedence,
   )
 where
 
@@ -97,17 +101,18 @@ layOut column context expr
                 layOut (inner + 2 + Text.length joint + 1) (precedence expr + 1) right,
                 closing
               ]
+      -- Brackets are not this branch's business: what is written around a
+      -- comma-separated list already has its own, and binds as tightly as a
+      -- name does.
       Applied before arguments after ->
         Text.concat
-          [ opening,
-            before,
-            newlineAt (inner + 2),
+          [ before,
+            newlineAt (column + 2),
             Text.intercalate
-              (Text.concat [",", newlineAt (inner + 2)])
-              (map (layOutArgument (inner + 2)) arguments),
-            newlineAt inner,
-            after,
-            closing
+              (Text.concat [",", newlineAt (column + 2)])
+              (map (layOutArgument (column + 2)) arguments),
+            newlineAt column,
+            after
           ]
   where
     flat = renderIn context expr
