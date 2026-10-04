@@ -1,0 +1,56 @@
+{-# LANGUAGE OverloadedStrings #-}
+
+-- | The renderer against Prometheus's own parser.
+--
+-- Nothing in this repository can say whether a query is valid PromQL, or
+-- whether two spellings of one mean the same thing.  Prometheus can, so these
+-- ask it.
+module PromQL.E2E.RenderSpec (spec) where
+
+import Network.HTTP.Client (defaultManagerSettings, newManager)
+import PromQL
+import PromQL.E2E.Prometheus
+import PromQL.Gen ()
+import Test.Syd
+import Test.Syd.Validity
+
+spec :: Spec
+spec =
+  setupAround
+    ( liftIO $ do
+        manager <- newManager defaultManagerSettings
+        prometheus <- prometheusUrlFromEnvironment
+        pure (manager, prometheus)
+    )
+    $ do
+      it "writes a query Prometheus can parse, whatever the expression" $ \(manager, prometheus) ->
+        forAllValid $ \expr -> do
+          parsed <- parseQuery manager prometheus (render expr)
+          case parsed of
+            Parsed _ -> pure ()
+            Unparseable complaint ->
+              expectationFailure $
+                unlines
+                  [ "Prometheus would not parse what we wrote:",
+                    show (render expr),
+                    "",
+                    show complaint
+                  ]
+
+      -- The precedence table in the renderer, checked against the one
+      -- Prometheus implements.  Writing every bracket the grammar allows says
+      -- exactly which tree is meant; leaving out the ones it does not need
+      -- has to mean the same, and where it does not, our table is wrong.
+      it "means the same with the brackets left out as with all of them in" $ \(manager, prometheus) ->
+        forAllValid $ \expr -> do
+          minimal <- parseQuery manager prometheus (render expr)
+          everything <- parseQuery manager prometheus (renderBracketed expr)
+          minimal `shouldBe` everything
+
+      -- Breaking a query across lines is a question of where the spaces go,
+      -- and Prometheus reads nothing into those.
+      it "means the same laid out across lines as on one" $ \(manager, prometheus) ->
+        forAllValid $ \expr -> do
+          laidOut <- parseQuery manager prometheus (render expr)
+          flat <- parseQuery manager prometheus (renderFlat expr)
+          laidOut `shouldBe` flat

@@ -1,0 +1,215 @@
+{
+  "nodes": {
+    "dekking": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786608006,
+        "narHash": "sha256-WbT2gfT1btxRdit9jIyosTZJSy1rP90+VugzNYJoHmw=",
+        "owner": "NorfairKing",
+        "repo": "dekking",
+        "rev": "dbaa6522ce6b04a4e20fc763536cea9ee6775c36",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "dekking",
+        "type": "github"
+      }
+    },
+    "fast-myers-diff": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780340446,
+        "narHash": "sha256-PvJf6cAO7K6LwOluUq6yqVlrtrHR9vxBaPuuGVeXCUA=",
+        "owner": "NorfairKing",
+        "repo": "fast-myers-diff",
+        "rev": "78ac171911bac6a9aafc2c9a642012c5a0e731f0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "fast-myers-diff",
+        "type": "github"
+      }
+    },
+    "flake-compat": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767039857,
+        "narHash": "sha256-vNpUSpF5Nuw8xvDLj2KCwwksIbjua2LZCqhV1LNRDns=",
+        "owner": "NixOS",
+        "repo": "flake-compat",
+        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "flake-compat",
+        "type": "github"
+      }
+    },
+    "hopinion": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791115889,
+        "narHash": "sha256-4D+M7AQinwDcoaSyt00e6MrjZFbifcSqbPRfjaxHyW4=",
+        "owner": "NorfairKing",
+        "repo": "hopinion",
+        "rev": "2750b75f57346859853418e9cc524bf840106feb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "hopinion",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1791031588,
+        "narHash": "sha256-/FGDr01siZ8txrVzkOz6CYjiz0XR27JuVJP+aWchi4s=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "825e2028c29b702a4a5f085f08095d12099784f2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-26.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1787631388,
+        "narHash": "sha256-vMiXptXarfSdJb1Gkc+FYVOAibuBRj7qxGa8z68q1Uw=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "ac6b2166e7a9375683b8e98f860f273222337b16",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "opt-env-conf": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790505332,
+        "narHash": "sha256-tl1tYuvmM9oMsB+t80yr5pJjFt3bGrbhzIrfjq+TiBs=",
+        "owner": "NorfairKing",
+        "repo": "opt-env-conf",
+        "rev": "e9056ab1b3b87dc4ac7ffced7e83c1528cde51eb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "opt-env-conf",
+        "type": "github"
+      }
+    },
+    "pre-commit-hooks": {
+      "inputs": {
+        "flake-compat": "flake-compat",
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1790500375,
+        "narHash": "sha256-XN3sDtn8TU9hAc9xqZ+SqRB/HHm2wjxM6aSWYLJU+oo=",
+        "owner": "cachix",
+        "repo": "pre-commit-hooks.nix",
+        "rev": "a0e4241b51206fbcbf52fd322eb5f0cd80f153c4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "cachix",
+        "repo": "pre-commit-hooks.nix",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "dekking": "dekking",
+        "fast-myers-diff": "fast-myers-diff",
+        "hopinion": "hopinion",
+        "nixpkgs": "nixpkgs",
+        "opt-env-conf": "opt-env-conf",
+        "pre-commit-hooks": "pre-commit-hooks",
+        "safe-coloured-text": "safe-coloured-text",
+        "sydtest": "sydtest",
+        "validity": "validity",
+        "weeder-nix": "weeder-nix"
+      }
+    },
+    "safe-coloured-text": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784903337,
+        "narHash": "sha256-5FCPqh/vyZk2hwdTxS8+JVcP0TOoJ2GVq+XLIC2zQLs=",
+        "owner": "NorfairKing",
+        "repo": "safe-coloured-text",
+        "rev": "b228e0e8dabf628581a56240aefc3e6e1b3694e6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "safe-coloured-text",
+        "type": "github"
+      }
+    },
+    "sydtest": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790881424,
+        "narHash": "sha256-jHWIDIaFeA9ZZT6cw5RFcTY4cnX9mAFG9kadGq9bQKI=",
+        "owner": "NorfairKing",
+        "repo": "sydtest",
+        "rev": "cb4b4046f2c92deaff5470519b1fb3be5a9755f6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "sydtest",
+        "type": "github"
+      }
+    },
+    "validity": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1780324029,
+        "narHash": "sha256-IpDsNcENUZWYS9wsB575Gk2kL4WsTJYA6949joTOjP4=",
+        "owner": "NorfairKing",
+        "repo": "validity",
+        "rev": "456dfd9e4ef7906d33ce70f3f5fdf204a12cce8e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "validity",
+        "type": "github"
+      }
+    },
+    "weeder-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781183210,
+        "narHash": "sha256-W7bGjdXihcsFADLzivYkW/vFXC1KOl1WoMbs9xQQy1k=",
+        "owner": "NorfairKing",
+        "repo": "weeder-nix",
+        "rev": "e0f0c0532babecb3e5726a1fbc1f89c1472c4cd4",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NorfairKing",
+        "repo": "weeder-nix",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

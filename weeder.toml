@@ -1,0 +1,20 @@
+unused-types = true
+type-class-roots = false
+roots = [
+  "^Main.main$",
+  "^Paths_.*",
+  # The library's whole surface is its reason to exist: a constructor nothing
+  # in this repository names is still one a user of the library can write.
+  "^PromQL\\.",
+]
+root-instances = [
+  # Exercised by the property tests and by deriving rather than by anything
+  # calling them directly.
+  { class = "GenValid" },
+  { class = "Validity" },
+  { class = "Generic" },
+  { class = "Show" },
+  { class = "Eq" },
+  { class = "Enum" },
+  { class = "Bounded" },
+]

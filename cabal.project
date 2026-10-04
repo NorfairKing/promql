@@ -1,0 +1,4 @@
+packages:
+  promql/
+  promql-gen/
+  promql-e2e/

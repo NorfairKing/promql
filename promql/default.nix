@@ -1,0 +1,9 @@
+{ mkDerivation, base, lib, text, validity, validity-text }:
+mkDerivation {
+  pname = "promql";
+  version = "0.0.0";
+  src = ./.;
+  libraryHaskellDepends = [ base text validity validity-text ];
+  description = "PromQL as a type rather than as text";
+  license = lib.licenses.mit;
+}

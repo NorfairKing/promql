@@ -1,0 +1,182 @@
+{
+  description = "promql";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+    validity.url = "github:NorfairKing/validity";
+    validity.flake = false;
+    safe-coloured-text.url = "github:NorfairKing/safe-coloured-text";
+    safe-coloured-text.flake = false;
+    fast-myers-diff.url = "github:NorfairKing/fast-myers-diff";
+    fast-myers-diff.flake = false;
+    sydtest.url = "github:NorfairKing/sydtest";
+    sydtest.flake = false;
+    opt-env-conf.url = "github:NorfairKing/opt-env-conf";
+    opt-env-conf.flake = false;
+    dekking.url = "github:NorfairKing/dekking";
+    dekking.flake = false;
+    weeder-nix.url = "github:NorfairKing/weeder-nix";
+    weeder-nix.flake = false;
+    hopinion.url = "github:NorfairKing/hopinion";
+    hopinion.flake = false;
+  };
+
+  outputs =
+    { self
+    , nixpkgs
+    , pre-commit-hooks
+    , validity
+    , safe-coloured-text
+    , fast-myers-diff
+    , sydtest
+    , opt-env-conf
+    , dekking
+    , weeder-nix
+    , hopinion
+    }:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          self.overlays.default
+          (import (validity + "/nix/overlay.nix"))
+          (import (safe-coloured-text + "/nix/overlay.nix"))
+          (import (fast-myers-diff + "/nix/overlay.nix"))
+          (import (sydtest + "/nix/overlay.nix"))
+          (import (opt-env-conf + "/nix/overlay.nix"))
+          (import (dekking + "/nix/overlay.nix"))
+          (import (weeder-nix + "/nix/overlay.nix"))
+          (import (hopinion + "/nix/overlay.nix"))
+        ];
+      };
+      packageNames = builtins.attrNames pkgs.haskellPackages.promqlPackages;
+    in
+    {
+      overlays.default = import ./nix/overlay.nix;
+      packages.${system} = {
+        default = pkgs.promqlRelease;
+      } // pkgs.haskellPackages.promqlPackages;
+
+      checks.${system} = {
+        inherit (pkgs.haskellPackages.promqlPackages) promql promql-gen promql-e2e;
+        pre-commit = pre-commit-hooks.lib.${system}.run {
+          src = ./.;
+          hooks = {
+            # Only formatters here; the checkers are separate checks with
+            # properly filtered sources, so that a checker failing does not
+            # look like a file needing to be rewritten.
+            hpack.enable = true;
+            ormolu.enable = true;
+            nixpkgs-fmt.enable = true;
+            nixpkgs-fmt.excludes = [ ".*/default.nix" ];
+            cabal2nix.enable = true;
+            tagref.enable = true;
+          };
+        };
+        hlint-check =
+          let
+            mkHlintCheck = name:
+              let
+                src = pkgs.lib.cleanSourceWith {
+                  src = ./${name};
+                  filter = path: type:
+                    type == "directory" || pkgs.lib.hasSuffix ".hs" (baseNameOf path);
+                };
+              in
+              pkgs.runCommand "hlint-check-${name}"
+                {
+                  nativeBuildInputs = [ pkgs.haskellPackages.hlint ];
+                } ''
+                hlint --hint=${./.hlint.yaml} ${src}
+                touch $out
+              '';
+          in
+          pkgs.linkFarm "hlint-check" (builtins.listToAttrs (map
+            (name: { name = "hlint-${name}"; value = mkHlintCheck name; })
+            packageNames));
+        statix-check = pkgs.runCommand "statix-check"
+          {
+            nativeBuildInputs = [ pkgs.statix ];
+          } ''
+          statix check ${
+            pkgs.lib.cleanSourceWith {
+              src = ./.;
+              filter = path: type:
+                (type == "directory" || pkgs.lib.hasSuffix ".nix" (baseNameOf path))
+                && baseNameOf path != "default.nix";
+            }
+          }
+          touch $out
+        '';
+        deadnix-check = pkgs.runCommand "deadnix-check"
+          {
+            nativeBuildInputs = [ pkgs.deadnix ];
+          } ''
+          deadnix --fail ${
+            pkgs.lib.cleanSourceWith {
+              src = ./.;
+              filter = path: type:
+                (type == "directory" || pkgs.lib.hasSuffix ".nix" (baseNameOf path))
+                && baseNameOf path != "default.nix";
+            }
+          }
+          touch $out
+        '';
+        weeder-check = pkgs.weeder-nix.makeWeederCheck {
+          weederToml = ./weeder.toml;
+          packages = packageNames;
+        };
+        hopinion = pkgs.hopinion.makeHopinionCheck {
+          src = ./.;
+          packages = packageNames;
+        };
+        coverage-report = pkgs.dekking.makeCoverageReport {
+          name = "promql-coverage-report";
+          packages = [ "promql" ];
+          coverage = [ "promql-gen" ];
+          # The renderer is what the suite is about, so anything much below
+          # this means a case went in without a test.
+          threshold = 80; # %
+        };
+        # Every mutation of the renderer should be caught: it is a pure
+        # function over a small type, with a suite that asserts the text.
+        mutation = pkgs.haskellPackages.sydtest.mutationCheck {
+          name = "mutation-promql";
+          configFile = ./mutation.yaml;
+          libraries = [ "promql" ];
+          tests = [ "promql-gen" ];
+        };
+        # The one check that asks Prometheus rather than us.
+        e2e-test = pkgs.promqlE2ETest;
+      };
+
+      devShells.${system}.default =
+        let
+          shellHaskellPackages = pkgs.haskellPackages.extend (_: super:
+            let
+              checked = builtins.mapAttrs
+                (_: pkg: pkgs.haskell.lib.doCheck pkg)
+                super.promqlPackages;
+            in
+            checked // { promqlPackages = checked; });
+        in
+        shellHaskellPackages.shellFor {
+          name = "promql-shell";
+          packages = p: builtins.attrValues p.promqlPackages;
+          withHoogle = true;
+          buildInputs = with pkgs; [
+            cabal-install
+            deadnix
+            haskellPackages.weeder
+            pkgs.hopinion
+            prometheus
+            prometheus.cli
+            statix
+            zlib
+          ] ++ self.checks.${system}.pre-commit.enabledPackages;
+          shellHook = self.checks.${system}.pre-commit.shellHook;
+        };
+    };
+}
