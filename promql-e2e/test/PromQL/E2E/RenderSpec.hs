@@ -59,3 +59,13 @@ spec =
           flat <- parseQuery manager prometheus (renderFlat expr)
           laidOut `shouldSatisfy` wasParsed
           laidOut `shouldBe` flat
+
+      -- Every property above asserts that Prometheus parsed what it was
+      -- given, so none of them ever sees a refusal, and the half of the
+      -- envelope that carries one would go unread.  A refusal that failed to
+      -- decode now throws rather than coming back, so this is what keeps a
+      -- rejected query reading as a rejected query.
+      it "brings back what Prometheus said was wrong rather than throwing" $ \(manager, prometheus) -> do
+        -- Well formed, and refused: log2 takes an instant vector.
+        refused <- parseQuery manager prometheus (render (Apply (Log2 (Number 2))))
+        refused `shouldSatisfy` (not . wasParsed)

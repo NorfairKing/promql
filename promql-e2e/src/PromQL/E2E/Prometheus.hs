@@ -17,9 +17,11 @@ module PromQL.E2E.Prometheus
   )
 where
 
+import Autodocodec
 import Data.Aeson (Value (..))
 import qualified Data.Aeson as JSON
 import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.HashMap.Strict as HashMap
 import Data.List (sortOn)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
@@ -43,13 +45,36 @@ prometheusUrlFromEnvironment =
     Just url -> pure (PrometheusUrl url)
 
 -- | What Prometheus made of a query.
+--
+-- Both of these are answers: a refusal is Prometheus saying what is wrong
+-- with the query, which is as much a result as a tree.  A response that is
+-- neither is not one of these, because that is a server that is not working
+-- rather than a query that is not valid.
 data ParsedQuery
-  = -- | The tree it parsed, with everything the grammar does not care about
-    -- taken out of it.
+  = -- | The tree it parsed.
     Parsed !Value
   | -- | What it said was wrong with the query.
     Unparseable !Text
   deriving (Show, Eq)
+
+-- | The envelope the two answers arrive in, which @status@ tells apart.
+--
+-- No 'ToJSON' or 'FromJSON' beside this: nothing writes one of these, so an
+-- encoder would be one nothing uses, and the codec is all the decoding needs.
+instance HasCodec ParsedQuery where
+  codec =
+    object "ParsedQuery" $
+      discriminatedUnionCodec
+        "status"
+        ( \case
+            Parsed tree -> ("success", mapToEncoder tree (requiredField' "data"))
+            Unparseable complaint -> ("error", mapToEncoder complaint (requiredField' "error"))
+        )
+        ( HashMap.fromList
+            [ ("success", ("Parsed", mapToDecoder Parsed (requiredField' "data"))),
+              ("error", ("Unparseable", mapToDecoder Unparseable (requiredField' "error")))
+            ]
+        )
 
 -- | Whether Prometheus made anything of it at all.
 --
@@ -66,6 +91,10 @@ wasParsed = \case
 -- The tree is normalised first: brackets the grammar makes redundant are
 -- dropped and a selector's matchers are sorted, because a query means
 -- nothing by either, and comparing two spellings is the whole point.
+--
+-- A response that is not one of the two answers throws rather than coming
+-- back as a refusal.  A test told that Prometheus refused the query would go
+-- looking at the query, and the thing to look at would be the server.
 parseQuery :: Manager -> PrometheusUrl -> Text -> IO ParsedQuery
 parseQuery manager prometheus query = do
   initial <- parseUrlThrow (concat [unPrometheusUrl prometheus, "/api/v1/parse_query"])
@@ -74,17 +103,17 @@ parseQuery manager prometheus query = do
           [("query", Just (Text.encodeUtf8 query))]
           initial {checkResponse = \_ _ -> pure ()}
   response <- httpLbs request manager
-  pure $ case JSON.decode (responseBody response) of
-    Nothing -> Unparseable "Prometheus answered something that was not JSON."
-    Just body -> case body of
-      Object fields -> case KeyMap.lookup "status" fields of
-        Just (String "success") -> case KeyMap.lookup "data" fields of
-          Just parsed -> Parsed (normalise parsed)
-          Nothing -> Unparseable "Prometheus answered success with no tree."
-        _ -> case KeyMap.lookup "error" fields of
-          Just (String message) -> Unparseable message
-          _ -> Unparseable "Prometheus answered neither a tree nor an error."
-      _ -> Unparseable "Prometheus answered something that was not an object."
+  case eitherDecodeJSONViaCodec (responseBody response) of
+    Left complaint ->
+      fail $
+        unlines
+          [ "Prometheus answered neither a tree nor a complaint about the query,",
+            "which is a server that is not working rather than a query that is not valid:",
+            complaint,
+            show (responseBody response)
+          ]
+    Right (Parsed tree) -> pure (Parsed (normalise tree))
+    Right unparseable -> pure unparseable
 
 -- | A parse tree with everything in it that a query does not mean.
 normalise :: Value -> Value

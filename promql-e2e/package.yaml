@@ -24,8 +24,10 @@ library:
   source-dirs: src
   dependencies:
   - aeson
+  - autodocodec
   - http-client
   - text
+  - unordered-containers
   - vector
 
 tests:
