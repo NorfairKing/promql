@@ -8,10 +8,20 @@ name:           promql-gen
 version:        0.0.0
 synopsis:       Generators and tests for promql
 category:       Monitoring
+homepage:       https://github.com/NorfairKing/promql#readme
+bug-reports:    https://github.com/NorfairKing/promql/issues
 author:         Tom Sydney Kerckhove
 maintainer:     syd@cs-syd.eu
+copyright:      Copyright: (c) 2026 Tom Sydney Kerckhove
 license:        MIT
+license-file:   LICENSE
 build-type:     Simple
+extra-source-files:
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/NorfairKing/promql
 
 library
   exposed-modules:

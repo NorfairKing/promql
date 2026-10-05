@@ -20,6 +20,7 @@
     weeder-nix.flake = false;
     hopinion.url = "github:NorfairKing/hopinion";
     hopinion.flake = false;
+    release-to-hackage.url = "github:NorfairKing/release-to-hackage";
   };
 
   outputs =
@@ -34,6 +35,7 @@
     , dekking
     , weeder-nix
     , hopinion
+    , release-to-hackage
     }:
     let
       system = "x86_64-linux";
@@ -64,6 +66,19 @@
       overlays.default = import ./nix/overlay.nix;
       packages.${system} = {
         default = pkgs.haskellPackages.promql;
+        # What a release of this is: everything but the harness.
+        #
+        # Named by what it leaves out rather than by what it takes in, so that
+        # a package added later is released unless somebody says otherwise.
+        # The other way round, a new one is left out until somebody remembers
+        # a list over here, and nothing says they forgot.
+        #
+        # promql-e2e is what asks a Prometheus whether the other two are
+        # right.  It is this repository's own business and nobody would depend
+        # on it.
+        release-to-hackage = release-to-hackage.lib.${system}.makeHackageRelease {
+          packages = removeAttrs promqlPackages [ "promql-e2e" ];
+        };
       } // promqlPackages;
 
       checks.${system} = {

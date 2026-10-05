@@ -13,6 +13,7 @@ mkDerivation {
     base genvalidity-sydtest promql QuickCheck sydtest text
   ];
   testToolDepends = [ sydtest-discover ];
+  homepage = "https://github.com/NorfairKing/promql#readme";
   description = "Generators and tests for promql";
   license = lib.licenses.mit;
 }
