@@ -18,7 +18,6 @@ module PromQL.Gen
     genScalar,
     genInstantVector,
     genRange,
-    genDurationVariable,
   )
 where
 
@@ -288,7 +287,8 @@ instance GenValid Duration where
         Years <$> chooseWord 292
         -- No DurationVariable: what one stands for is not PromQL's business,
         -- so a query carrying one is not a query until whatever put it there
-        -- has substituted it.  'genDurationVariable' makes those.
+        -- has substituted it, and the end-to-end check hands these to a
+        -- Prometheus that would have to parse them.
       ]
     where
       chooseWord upper = chooseBoundedIntegral (0, upper)
@@ -301,11 +301,6 @@ instance GenValid LabelName where
 instance GenValid MetricName where
   genValid = MetricName <$> genIdentifier
   shrinkValid = filter isValid . map MetricName . shrinkValid . unMetricName
-
--- | A window written as something else to fill in later, such as one of
--- Grafana's interval variables.
-genDurationVariable :: Gen Duration
-genDurationVariable = DurationVariable <$> genIdentifier
 
 -- | A name Prometheus will read as one.
 --

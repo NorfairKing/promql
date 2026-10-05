@@ -124,9 +124,14 @@
           }
           touch $out
         '';
+        # Roots are what the tests reach, which is why includeTests is on: for a
+        # library the API is the thing to keep alive, and the suite exercises
+        # all of it.  An export no test reaches is reported, which is the
+        # report worth having.
         weeder-check = pkgs.weeder-nix.makeWeederCheck {
           weederToml = ./weeder.toml;
           packages = packageNames;
+          includeTests = true;
         };
         hopinion = pkgs.hopinion.makeHopinionCheck {
           src = ./.;
