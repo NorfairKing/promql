@@ -13,7 +13,7 @@ bug-reports:    https://github.com/NorfairKing/promql/issues
 author:         Tom Sydney Kerckhove
 maintainer:     syd@cs-syd.eu
 copyright:      Copyright: (c) 2026 Tom Sydney Kerckhove
-license:        MIT
+license:        AllRightsReserved
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:

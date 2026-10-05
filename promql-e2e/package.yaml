@@ -4,7 +4,8 @@ synopsis: End-to-end tests for promql against a real Prometheus
 category: Monitoring
 author: Tom Sydney Kerckhove
 maintainer: syd@cs-syd.eu
-license: MIT
+license: AllRightsReserved
+license-file: LICENSE
 
 ghc-options:
 - -Wall

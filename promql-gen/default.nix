@@ -15,5 +15,6 @@ mkDerivation {
   testToolDepends = [ sydtest-discover ];
   homepage = "https://github.com/NorfairKing/promql#readme";
   description = "Generators and tests for promql";
-  license = lib.licenses.mit;
+  license = lib.licenses.unfree;
+  hydraPlatforms = lib.platforms.none;
 }

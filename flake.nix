@@ -41,6 +41,9 @@
       system = "x86_64-linux";
       pkgs = import nixpkgs {
         inherit system;
+        # These are all rights reserved, which nixpkgs reads as unfree and
+        # will not build without being told it may.
+        config.allowUnfree = true;
         overlays = [
           self.overlays.default
           (import (validity + "/nix/overlay.nix"))

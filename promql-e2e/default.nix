@@ -14,5 +14,6 @@ mkDerivation {
   ];
   testToolDepends = [ sydtest-discover ];
   description = "End-to-end tests for promql against a real Prometheus";
-  license = lib.licenses.mit;
+  license = lib.licenses.unfree;
+  hydraPlatforms = lib.platforms.none;
 }

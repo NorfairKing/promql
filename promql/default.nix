@@ -6,5 +6,6 @@ mkDerivation {
   libraryHaskellDepends = [ base text validity validity-text ];
   homepage = "https://github.com/NorfairKing/promql#readme";
   description = "PromQL as a type rather than as text";
-  license = lib.licenses.mit;
+  license = lib.licenses.unfree;
+  hydraPlatforms = lib.platforms.none;
 }

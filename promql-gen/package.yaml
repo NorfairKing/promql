@@ -7,7 +7,7 @@ synopsis: Generators and tests for promql
 category: Monitoring
 author: Tom Sydney Kerckhove
 maintainer: syd@cs-syd.eu
-license: MIT
+license: AllRightsReserved
 
 ghc-options:
 - -Wall
