@@ -1,49 +1,17 @@
 final: prev:
-with final.lib;
-with final.haskell.lib;
 {
-  promqlRelease = final.symlinkJoin {
-    name = "promql-release";
-    paths = builtins.attrValues final.haskellPackages.promqlPackages;
-  };
-
-  # The end-to-end check: a real Prometheus, started here, asked to parse
-  # every query the suite can generate.
-  #
-  # Prometheus itself rather than promtool, because promtool's formatter keeps
-  # whatever brackets it was given and so cannot say whether two spellings
-  # mean the same thing.  The parse endpoint answers with the tree.
-  promqlE2ETest = final.callPackage ./e2e-test.nix {
-    inherit (final.haskellPackages.promqlPackages) promql-e2e;
-  };
-
+  # Composed with override rather than extend, because extend hands back a
+  # package set without an override of its own and every overlay after this
+  # one asks for it.
   haskellPackages = prev.haskellPackages.override (old: {
-    overrides = final.lib.composeExtensions (old.overrides or (_: _: { })) (self: _:
-      let
-        promqlPackages = {
-          promql = promqlPkg "promql";
-          promql-gen = promqlPkg "promql-gen";
-          promql-e2e = promqlPkg "promql-e2e";
-        };
-        # buildStrictly is buildFromSdist plus failOnAllWarnings, so the warning
-        # set each package states is backed by a floor here that one of them
-        # losing -Werror cannot quietly remove.
-        promqlPkg = name:
-          buildStrictly (overrideCabal
-            (self.callPackage (../${name}) { })
-            (_: {
-              doBenchmark = false;
-              doHaddock = false;
-              doCoverage = false;
-              doHoogle = false;
-              doCheck = false;
-              hyperlinkSource = false;
-              enableLibraryProfiling = false;
-              enableExecutableProfiling = false;
-            }));
-      in
-      {
-        inherit promqlPackages;
-      } // promqlPackages);
+    overrides = final.lib.composeExtensions (old.overrides or (_: _: { })) (self: _: {
+      promql = self.callPackage ../promql { };
+      promql-gen = self.callPackage ../promql-gen { };
+      # The only override of a package, and only because the suite in this one
+      # asks a Prometheus that nothing outside this repository's own check
+      # starts.  Everything else is a default build: how a package is built is
+      # the business of whoever is building it.
+      promql-e2e = final.haskell.lib.dontCheck (self.callPackage ../promql-e2e { });
+    });
   });
 }

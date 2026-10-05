@@ -51,16 +51,23 @@
           (import (hopinion + "/nix/overlay.nix"))
         ];
       };
-      packageNames = builtins.attrNames pkgs.haskellPackages.promqlPackages;
+      # The packages this repository has, which the checks below are made
+      # one per.  A list rather than something read out of the overlay,
+      # because the overlay is three callPackage lines and nothing else.
+      packageNames = [ "promql" "promql-gen" "promql-e2e" ];
+      promqlPackages =
+        builtins.listToAttrs (map
+          (name: { inherit name; value = pkgs.haskellPackages.${name}; })
+          packageNames);
     in
     {
       overlays.default = import ./nix/overlay.nix;
       packages.${system} = {
-        default = pkgs.promqlRelease;
-      } // pkgs.haskellPackages.promqlPackages;
+        default = pkgs.haskellPackages.promql;
+      } // promqlPackages;
 
       checks.${system} = {
-        inherit (pkgs.haskellPackages.promqlPackages) promql promql-gen promql-e2e;
+        inherit (pkgs.haskellPackages) promql promql-gen promql-e2e;
         pre-commit = pre-commit-hooks.lib.${system}.run {
           src = ./.;
           hooks = {
@@ -153,23 +160,21 @@
           libraries = [ "promql" ];
           tests = [ "promql-gen" ];
         };
-        # The one check that asks Prometheus rather than us.
-        e2e-test = pkgs.promqlE2ETest;
+        # The one check that asks Prometheus rather than us.  Here rather
+        # than in the overlay: it is this repository's own harness, and
+        # nothing importing the overlay should be handed it.
+        e2e-test = pkgs.callPackage ./nix/e2e-test.nix {
+          inherit (pkgs.haskellPackages) promql-e2e;
+        };
       };
 
       devShells.${system}.default =
         let
-          shellHaskellPackages = pkgs.haskellPackages.extend (_: super:
-            let
-              checked = builtins.mapAttrs
-                (_: pkg: pkgs.haskell.lib.doCheck pkg)
-                super.promqlPackages;
-            in
-            checked // { promqlPackages = checked; });
+          shellHaskellPackages = pkgs.haskellPackages;
         in
         shellHaskellPackages.shellFor {
           name = "promql-shell";
-          packages = p: builtins.attrValues p.promqlPackages;
+          packages = p: map (name: p.${name}) packageNames;
           withHoogle = true;
           buildInputs = with pkgs; [
             cabal-install
