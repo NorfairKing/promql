@@ -19,10 +19,8 @@ where
 
 import Autodocodec
 import Data.Aeson (Value (..))
-import qualified Data.Aeson as JSON
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (sortOn)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
 import qualified Data.Vector as Vector
@@ -88,9 +86,9 @@ wasParsed = \case
 
 -- | Hand a query to Prometheus and keep the tree, or the complaint.
 --
--- The tree is normalised first: brackets the grammar makes redundant are
--- dropped and a selector's matchers are sorted, because a query means
--- nothing by either, and comparing two spellings is the whole point.
+-- The tree has its brackets taken out of it first: a query means nothing by
+-- where those were written, and comparing two spellings of one is the whole
+-- point.
 --
 -- A response that is not one of the two answers throws rather than coming
 -- back as a refusal.  A test told that Prometheus refused the query would go
@@ -115,23 +113,24 @@ parseQuery manager prometheus query = do
     Right (Parsed tree) -> pure (Parsed (normalise tree))
     Right unparseable -> pure unparseable
 
--- | A parse tree with everything in it that a query does not mean.
+-- | A parse tree without the brackets that only say where they were written.
+--
+-- Prometheus records a bracket as a node of its own, so the tree it answers
+-- with says how the query was punctuated as well as what it means.  Comparing
+-- two spellings of one expression is the whole point here, and one of the two
+-- is deliberately bracketed at every step, so the brackets are what has to go.
+--
+-- This walks the JSON rather than a type of Prometheus's syntax, because
+-- there is no such type here to walk: this library writes PromQL and does not
+-- read it, so what comes back is a 'Value'.  Giving it a type means
+-- transcribing Prometheus's whole AST schema, and a transcription that only
+-- covered part of it would fail to decode answers that are perfectly good.
 normalise :: Value -> Value
 normalise = \case
   Object fields
     | Just "parenExpr" <- KeyMap.lookup "type" fields,
       Just inner <- KeyMap.lookup "expr" fields ->
         normalise inner
-    | otherwise -> Object (KeyMap.map normalise (sortMatchers fields))
+    | otherwise -> Object (KeyMap.map normalise fields)
   Array values -> Array (Vector.map normalise values)
   other -> other
-  where
-    -- A selector says the same thing whatever order its matchers are written
-    -- in, and Prometheus keeps the order it was given.
-    sortMatchers fields = case KeyMap.lookup "matchers" fields of
-      Just (Array matchers) ->
-        KeyMap.insert
-          "matchers"
-          (Array (Vector.fromList (sortOn JSON.encode (Vector.toList matchers))))
-          fields
-      _ -> fields
