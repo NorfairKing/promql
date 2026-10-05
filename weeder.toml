@@ -1,0 +1,31 @@
+unused-types = true
+type-class-roots = false
+
+# The roots are the test suites, and the weeder check is run with
+# `includeTests = true`, so everything the tests reach counts as reached.
+#
+# For a library that is the root set worth having.  The API is what has to
+# stay alive, the suite exercises all of it, and an export no test reaches is
+# reported rather than quietly rooted.  Rooting the module prefix instead
+# would make every binding in the library a root, and the check could then
+# never report anything; rooting the API by hand would be a list that drifts
+# from the export lists it copies.
+#
+# What this does not catch is dead code inside the test suites themselves,
+# which is the trade it makes.
+roots = [
+  "^Main.main$",
+  "^Paths_.*",
+]
+root-instances = [
+  # Exercised by deriving and by the property tests rather than by anything
+  # calling them directly.
+  { class = "GenValid" },
+  { class = "Validity" },
+  { class = "Generic" },
+  { class = "Show" },
+  { class = "Eq" },
+  { class = "Ord" },
+  { class = "Enum" },
+  { class = "Bounded" },
+]

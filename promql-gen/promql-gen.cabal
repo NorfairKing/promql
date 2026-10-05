@@ -1,0 +1,63 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.38.3.
+--
+-- see: https://github.com/sol/hpack
+
+name:           promql-gen
+version:        0.0.0
+synopsis:       Generators and tests for promql
+category:       Monitoring
+homepage:       https://github.com/NorfairKing/promql#readme
+bug-reports:    https://github.com/NorfairKing/promql/issues
+author:         Tom Sydney Kerckhove
+maintainer:     syd@cs-syd.eu
+copyright:      Copyright: (c) 2026 Tom Sydney Kerckhove
+license:        AllRightsReserved
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/NorfairKing/promql
+
+library
+  exposed-modules:
+      PromQL.Gen
+  other-modules:
+      Paths_promql_gen
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wincomplete-record-updates -Wpartial-fields -Widentities -Wredundant-constraints -Wcpp-undef -Wunused-packages
+  build-depends:
+      QuickCheck
+    , base >=4.7 && <5
+    , genvalidity
+    , genvalidity-text
+    , promql
+    , text
+  default-language: Haskell2010
+
+test-suite promql-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      PromQL.ExprSpec
+      PromQL.RenderSpec
+      Paths_promql_gen
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wincomplete-record-updates -Wpartial-fields -Widentities -Wredundant-constraints -Wcpp-undef -Wunused-packages -threaded -rtsopts "-with-rtsopts=-N"
+  build-tool-depends:
+      sydtest-discover:sydtest-discover
+  build-depends:
+      QuickCheck
+    , base >=4.7 && <5
+    , genvalidity-sydtest
+    , promql
+    , promql-gen
+    , sydtest
+    , text
+  default-language: Haskell2010

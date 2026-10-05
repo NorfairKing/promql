@@ -1,0 +1,14 @@
+# Mutation-plugin config for promql.
+#
+# Schema: Test.Syd.Mutation.Plugin.OptParse.MutationPluginConfig in the
+# sydtest repo. Wired into nix via the 'configFile' argument of
+# sydtest.mutationCheck in flake.nix.
+
+debug: true
+
+operators:
+  ConstEmptyList:
+    # Every [Char]-typed expression in this library is a piece of a query or
+    # of an error message. The query pieces are asserted by the renderer's
+    # tests; the messages are not, and mutating one to "" is noise.
+    skip-strings: true

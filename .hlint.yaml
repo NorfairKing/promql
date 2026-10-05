@@ -1,0 +1,53 @@
+- group: {name: future, enabled: true}
+- group: {name: use-th-quotes, enabled: true}
+
+# Prefer 'Map' over 'Map.Map', by importing the module a second time as
+# 'import Data.Map (Map)' alongside the qualified import.
+- warn: {name: "Redundant module qualifier"}
+
+- ignore: {name: "Use newtype instead of data"}
+- ignore: {name: "Use const"}
+- ignore: {name: "Use record patterns"}
+
+# hopinion asks for a list of the pieces rather than a <> or ++ chain, so this
+# hint and the house rule pull in opposite directions.  The house rule wins.
+- ignore: {name: "Use ++"}
+
+# Partial functions, banned outright. A query is written once and read when
+# something else has already gone wrong; it must not be the thing that throws.
+- functions:
+  - name: head
+    within: []
+    message: "Partial function. Pattern-match, or use a NonEmpty."
+  - name: tail
+    within: []
+    message: "Partial function. Pattern-match, or use a NonEmpty."
+  - name: init
+    within: []
+    message: "Partial function. Pattern-match, or use a NonEmpty."
+  - name: last
+    within: []
+    message: "Partial function. Pattern-match, or use a NonEmpty."
+  - name: fromJust
+    within: []
+    message: "Partial function. Pattern-match on the Maybe."
+  - name: read
+    within: []
+    message: "Partial function. Use 'readMaybe' from Text.Read instead."
+  - name: Data.List.NonEmpty.fromList
+    within: []
+    message: "Partial function. Use 'nonEmpty' and handle the empty case."
+  - name: error
+    within: []
+    message: "Throws at a distance. Answer with an Either or a Maybe."
+  - name: undefined
+    within: []
+    message: "Throws at a distance."
+  - name: fromIntegral
+    within: []
+    message: "Polymorphic conversion can silently overflow or truncate. Name the two types."
+  # Don't filter iterations with '==>'; bake the precondition into the
+  # generator instead, e.g. 'forAll (genValid `suchThat` p)'.
+  - name: (Test.QuickCheck.==>)
+    within: []
+    message: "Bake the precondition into the generator instead."

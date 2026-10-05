@@ -1,0 +1,49 @@
+name: promql-e2e
+version: 0.0.0
+synopsis: End-to-end tests for promql against a real Prometheus
+category: Monitoring
+author: Tom Sydney Kerckhove
+maintainer: syd@cs-syd.eu
+license: AllRightsReserved
+license-file: LICENSE
+
+ghc-options:
+- -Wall
+- -Werror
+- -Wincomplete-uni-patterns
+- -Wincomplete-record-updates
+- -Wpartial-fields
+- -Widentities
+- -Wredundant-constraints
+- -Wcpp-undef
+- -Wunused-packages
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+  dependencies:
+  - aeson
+  - autodocodec
+  - http-client
+  - text
+  - unordered-containers
+  - vector
+
+tests:
+  promql-e2e-test:
+    main: Spec.hs
+    source-dirs: test
+    build-tools: sydtest-discover
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - '"-with-rtsopts=-N"'
+    dependencies:
+    - genvalidity-sydtest
+    - http-client
+    - promql
+    - promql-e2e
+    - promql-gen
+    - sydtest

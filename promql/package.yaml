@@ -1,0 +1,34 @@
+name: promql
+version: 0.0.0
+github: NorfairKing/promql
+copyright: ! 'Copyright: (c) 2026 Tom Sydney Kerckhove'
+license-file: LICENSE
+synopsis: PromQL as a type rather than as text
+category: Monitoring
+author: Tom Sydney Kerckhove
+maintainer: syd@cs-syd.eu
+license: AllRightsReserved
+
+ghc-options:
+- -Wall
+- -Werror
+- -Wincomplete-uni-patterns
+- -Wincomplete-record-updates
+- -Wpartial-fields
+- -Widentities
+- -Wredundant-constraints
+- -Wcpp-undef
+- -Wunused-packages
+
+extra-source-files:
+- CHANGELOG.md
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+  dependencies:
+  - text
+  - validity
+  - validity-text
