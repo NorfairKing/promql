@@ -25,6 +25,8 @@ spec = do
     genValidSpec @BinOp
   describe "Comparison" $
     genValidSpec @Comparison
+  describe "Answering" $
+    genValidSpec @Answering
   describe "Matching" $
     genValidSpec @Matching
   describe "Call" $
@@ -293,13 +295,13 @@ spec = do
           Modulo,
           Power,
           Atan2,
-          Compare Equal False,
-          Compare NotEqual False,
-          Compare LessThan False,
-          Compare LessOrEqual False,
-          Compare GreaterThan False,
-          Compare GreaterOrEqual False,
-          Compare GreaterThan True,
+          Compare Equal AsAFilter,
+          Compare NotEqual AsAFilter,
+          Compare LessThan AsAFilter,
+          Compare LessOrEqual AsAFilter,
+          Compare GreaterThan AsAFilter,
+          Compare GreaterOrEqual AsAFilter,
+          Compare GreaterThan AsZeroOrOne,
           Or,
           And,
           Unless
@@ -598,8 +600,8 @@ spec = do
     it "binds a comparison more loosely than a sum and more tightly than and" $
       map
         render
-        [ Binary (Compare GreaterThan False) OnEverything (Binary Add OnEverything a a) a,
-          Binary And OnEverything (Binary (Compare GreaterThan False) OnEverything a a) a
+        [ Binary (Compare GreaterThan AsAFilter) OnEverything (Binary Add OnEverything a a) a,
+          Binary And OnEverything (Binary (Compare GreaterThan AsAFilter) OnEverything a a) a
         ]
         `shouldBe` ["a + a > a", "a > a and a"]
 
@@ -797,8 +799,8 @@ spec = do
       map
         render
         [ Binary And OnEverything (Binary Or OnEverything a a) a,
-          Binary (Compare GreaterThan False) OnEverything (Binary And OnEverything a a) a,
-          Binary Add OnEverything (Binary (Compare GreaterThan False) OnEverything a a) a,
+          Binary (Compare GreaterThan AsAFilter) OnEverything (Binary And OnEverything a a) a,
+          Binary Add OnEverything (Binary (Compare GreaterThan AsAFilter) OnEverything a a) a,
           Binary Multiply OnEverything (Binary Add OnEverything a a) a,
           Binary Power OnEverything (Binary Multiply OnEverything a a) a
         ]
@@ -813,8 +815,8 @@ spec = do
       map
         render
         [ Binary Or OnEverything (Binary And OnEverything a a) a,
-          Binary And OnEverything (Binary (Compare GreaterThan False) OnEverything a a) a,
-          Binary (Compare GreaterThan False) OnEverything (Binary Add OnEverything a a) a,
+          Binary And OnEverything (Binary (Compare GreaterThan AsAFilter) OnEverything a a) a,
+          Binary (Compare GreaterThan AsAFilter) OnEverything (Binary Add OnEverything a a) a,
           Binary Add OnEverything (Binary Multiply OnEverything a a) a,
           Binary Multiply OnEverything (Binary Power OnEverything a a) a
         ]
@@ -860,7 +862,7 @@ spec = do
         [ Or,
           And,
           Unless,
-          Compare Equal False,
+          Compare Equal AsAFilter,
           Add,
           Subtract,
           Multiply,
@@ -942,3 +944,110 @@ spec = do
             (wide 53)
         )
         `shouldBe` Text.concat [as 60, "\n  - ", as 60, "\n  - ", as 53]
+
+  -- Prometheus refuses a selector that does not narrow the series down, and
+  -- it means more by that than having a matcher at all: a matcher that
+  -- matches the empty string also matches every series without the label.
+  describe "a selector has to narrow something" $ do
+    let only matchers =
+          Selector
+            { selectorMetric = Nothing,
+              selectorMatchers = matchers,
+              selectorOffset = Nothing
+            }
+
+    it "refuses a selector of nothing but a negative matcher" $
+      map
+        (isValid . only . pure)
+        [ LabelName "l" `isNot` "v",
+          LabelName "l" `notMatching` Pattern "v"
+        ]
+        `shouldBe` [False, False]
+
+    it "refuses a matcher whose value is empty" $
+      isValid (only [LabelName "l" `is` ""]) `shouldBe` False
+
+    it "refuses a regular expression that matches the empty string" $
+      map
+        (isValid . only . pure . matching (LabelName "l"))
+        [ Literally "",
+          StartingWith "",
+          AnyOf ("a" :| [""])
+        ]
+        `shouldBe` [False, False, False]
+
+    it "takes a matcher that cannot match a series without the label" $
+      map
+        (isValid . only . pure)
+        [ LabelName "l" `is` "v",
+          LabelName "l" `matching` Literally "v",
+          LabelName "l" `matching` StartingWith "v",
+          LabelName "l" `matching` AnyOf ("a" :| ["b"])
+        ]
+        `shouldBe` [True, True, True, True]
+
+    -- Whether a pattern matches the empty string is a question of running a
+    -- regular expression, which this library does not do, so it is taken as
+    -- narrowing rather than refusing a legal query.
+    it "takes a pattern at its word" $
+      isValid (only [LabelName "l" `matching` Pattern ".*"]) `shouldBe` True
+
+    it "takes a metric name as narrowing on its own" $
+      isValid
+        Selector
+          { selectorMetric = Just (MetricName "a"),
+            selectorMatchers = [LabelName "l" `isNot` "v"],
+            selectorOffset = Nothing
+          }
+        `shouldBe` True
+
+    it "says which matchers narrow and which do not" $
+      map
+        matcherNarrows
+        [ LabelName "l" `is` "v",
+          LabelName "l" `is` "",
+          LabelName "l" `isNot` "v",
+          LabelName "l" `notMatching` Pattern "v"
+        ]
+        `shouldBe` [True, False, False, False]
+
+    it "says which regular expressions narrow and which do not" $
+      map
+        regexpNarrows
+        [Literally "v", Literally "", AnyOf ("a" :| ["b"]), AnyOf ("a" :| [""]), StartingWith "v", StartingWith "", Pattern ""]
+        `shouldBe` [True, False, True, False, True, False, True]
+
+  -- A window written as something to fill in later is the one thing that
+  -- reaches the query without being looked at, so what it may hold is the one
+  -- thing that has to be.
+  describe "a duration variable is one word" $ do
+    it "takes a variable that is one word" $
+      map (isValid . DurationVariable) ["$__rate_interval", "$__auto", "x"]
+        `shouldBe` [True, True, True]
+
+    it "refuses a variable that is empty, spaced, or closes the bracket" $
+      map (isValid . DurationVariable) ["", "a b", "a\tb", "a]b", "a\nb"]
+        `shouldBe` [False, False, False, False, False]
+
+  describe "a string is written so it can be read back" $ do
+    let valueOf text =
+          render (Vector (metric (MetricName "a")) {selectorMatchers = [LabelName "l" `is` text]})
+
+    it "escapes a backslash and a quote" $
+      map valueOf ["a\\b", "a\"b"]
+        `shouldBe` ["a{l=\"a\\\\b\"}", "a{l=\"a\\\"b\"}"]
+
+    -- Prometheus takes these raw, so this is not what stops it reading the
+    -- query.  A query is read back out of a dashboard's JSON and an alerting
+    -- rule's YAML, where a raw control character is somebody else's problem.
+    it "escapes the control characters rather than passing them through" $
+      map valueOf ["a\nb", "a\rb", "a\tb"]
+        `shouldBe` ["a{l=\"a\\nb\"}", "a{l=\"a\\rb\"}", "a{l=\"a\\tb\"}"]
+
+  describe "a comparison says what it answers with" $
+    it "writes the bool modifier only where it was asked for" $
+      let a = Vector (metric (MetricName "a"))
+       in map
+            (\answering -> render (Binary (Compare GreaterThan answering) OnEverything a a))
+            [AsAFilter, AsZeroOrOne]
+            `shouldBe` ["a > a", "a > bool a"]

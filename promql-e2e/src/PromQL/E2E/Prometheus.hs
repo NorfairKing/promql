@@ -12,6 +12,7 @@ module PromQL.E2E.Prometheus
   ( PrometheusUrl (..),
     prometheusUrlFromEnvironment,
     ParsedQuery (..),
+    wasParsed,
     parseQuery,
   )
 where
@@ -49,6 +50,16 @@ data ParsedQuery
   | -- | What it said was wrong with the query.
     Unparseable !Text
   deriving (Show, Eq)
+
+-- | Whether Prometheus made anything of it at all.
+--
+-- A test that compares two 'ParsedQuery' values is answered by two refusals
+-- as readily as by two trees, so one that means to compare trees has to say
+-- that it got any.
+wasParsed :: ParsedQuery -> Bool
+wasParsed = \case
+  Parsed _ -> True
+  Unparseable _ -> False
 
 -- | Hand a query to Prometheus and keep the tree, or the complaint.
 --

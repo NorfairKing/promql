@@ -45,6 +45,10 @@ spec =
         forAllValid $ \expr -> do
           minimal <- parseQuery manager prometheus (render expr)
           everything <- parseQuery manager prometheus (renderBracketed expr)
+          -- Both parsing is asserted rather than assumed: two queries that
+          -- Prometheus refuses for the same reason are equal as well, and
+          -- this would pass on them while saying nothing.
+          minimal `shouldSatisfy` wasParsed
           minimal `shouldBe` everything
 
       -- Breaking a query across lines is a question of where the spaces go,
@@ -53,4 +57,5 @@ spec =
         forAllValid $ \expr -> do
           laidOut <- parseQuery manager prometheus (render expr)
           flat <- parseQuery manager prometheus (renderFlat expr)
+          laidOut `shouldSatisfy` wasParsed
           laidOut `shouldBe` flat

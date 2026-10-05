@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | PromQL as a type rather than as text.
@@ -17,6 +18,7 @@ module PromQL.Expr
     Grouping (..),
     BinOp (..),
     Comparison (..),
+    Answering (..),
     Matching (..),
     Call (..),
     RangeFunction (..),
@@ -33,6 +35,8 @@ module PromQL.Expr
     Duration (..),
     metric,
     series,
+    matcherNarrows,
+    regexpNarrows,
     is,
     isNot,
     matching,
@@ -40,8 +44,9 @@ module PromQL.Expr
   )
 where
 
-import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
+import Data.Char (isAsciiLower, isAsciiUpper, isDigit, isSpace)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -73,9 +78,9 @@ data Expr
   deriving (Show, Eq, Generic)
 
 -- | A number in a query is a threshold, a scale factor or a floor, and none
--- of those is a NaN or an infinity.  PromQL can spell both, and a query that
--- means one says so with the @NaN@ or @Inf@ function rather than by carrying
--- a double that cannot be written down.
+-- of those is a NaN or an infinity.  Prometheus can spell both, but only as
+-- the bare words @NaN@ and @Inf@, which this type has no constructor for, so
+-- a double that cannot be written down is one nothing here can carry.
 instance Validity Expr where
   validate expr =
     mconcat
@@ -122,9 +127,7 @@ data BinOp
   | Modulo
   | Power
   | Atan2
-  | -- | Keeps the samples on the left that compare, and drops the rest, or
-    -- answers 0 and 1 where 'comparisonBool' says so.
-    Compare !Comparison !Bool
+  | Compare !Comparison !Answering
   | -- | The left-hand side where it has samples, and the right-hand side
     -- where it does not.
     Or
@@ -144,6 +147,21 @@ data Comparison
   deriving (Show, Eq, Generic)
 
 instance Validity Comparison
+
+-- | What a comparison answers with, which PromQL calls the bool modifier.
+--
+-- Two constructors rather than a 'Bool', because at a call site a bare 'True'
+-- says nothing about which of the two it asked for.
+data Answering
+  = -- | The samples on the left that compare, and nothing else: a comparison
+    -- used this way drops series rather than answering about them.
+    AsAFilter
+  | -- | One for each sample that compares and zero for each that does not, so
+    -- that every series on the left is still there afterwards.
+    AsZeroOrOne
+  deriving (Show, Eq, Generic)
+
+instance Validity Answering
 
 -- | Which labels the two sides of an operator are joined on.
 data Matching
@@ -261,21 +279,47 @@ data Selector = Selector
   }
   deriving (Show, Eq, Generic)
 
--- | A selector with neither a metric nor a matcher would select every series
--- there is, which Prometheus refuses outright.
+-- | A selector has to narrow the series down to something.
 --
--- Prometheus asks for more than this: one of the matchers has to be one that
--- does not match the empty string, so that a selector of nothing but negative
--- matchers is refused too.  Deciding that of a regular expression means
--- running one, which this type does not do, so a selector can be valid here
--- and still be refused there.
+-- Prometheus refuses one that does not, and it means more by that than having
+-- a matcher at all: a matcher that matches the empty string also matches
+-- every series that does not carry the label, so a selector made only of
+-- those still asks for everything.  @{l!="v"}@ and @{l=""}@ are both refused
+-- for that reason.
 instance Validity Selector where
   validate selector =
     mconcat
       [ genericValidate selector,
-        declare "the selector says something about which series it means" $
-          isJust (selectorMetric selector) || not (null (selectorMatchers selector))
+        declare "the selector narrows the series down to something" $
+          isJust (selectorMetric selector)
+            || any matcherNarrows (selectorMatchers selector)
       ]
+
+-- | Whether a matcher is one Prometheus counts as narrowing the selection,
+-- which is to say one that cannot match a series the label is absent from.
+matcherNarrows :: Matcher -> Bool
+matcherNarrows matcher = case matcherMatch matcher of
+  Is value -> not (Text.null value)
+  -- A negative matcher matches every series without the label, so it narrows
+  -- nothing on its own.
+  IsNot _ -> False
+  Matches regexp -> regexpNarrows regexp
+  DoesNotMatch _ -> False
+
+-- | The same question of a regular expression: whether it is one that cannot
+-- match the empty string.
+regexpNarrows :: Regexp -> Bool
+regexpNarrows = \case
+  Literally literal -> not (Text.null literal)
+  -- One empty alternative is enough to match the empty string.
+  AnyOf literals -> not (any Text.null literals)
+  StartingWith prefix -> not (Text.null prefix)
+  -- A regular expression nothing here runs, so whether it matches the empty
+  -- string is Prometheus's to say.  Taken as narrowing: a pattern that does
+  -- not is the rarer thing, and refusing one that does would turn a legal
+  -- query, such as the @{unit=~"prefix.+"}@ a log stream is picked out with,
+  -- into a value this type will not hold.
+  Pattern _ -> True
 
 -- | A selector for a metric, with nothing said about its labels yet.
 metric :: MetricName -> Selector
@@ -292,11 +336,9 @@ series :: NonEmpty Matcher -> Selector
 series matchers =
   Selector
     { selectorMetric = Nothing,
-      selectorMatchers = toList matchers,
+      selectorMatchers = NE.toList matchers,
       selectorOffset = Nothing
     }
-  where
-    toList = foldr (:) []
 
 data Matcher = Matcher
   { matcherLabel :: !LabelName,
@@ -390,16 +432,24 @@ data Duration
 -- testing says as much.
 instance Validity Duration where
   validate duration =
-    declare "the duration is one Prometheus has somewhere to put" $
-      case duration of
-        Milliseconds n -> n <= 9223372036854
-        Seconds n -> n <= 9223372036
-        Minutes n -> n <= 153722867
-        Hours n -> n <= 2562047
-        Days n -> n <= 106751
-        Weeks n -> n <= 15250
-        Years n -> n <= 292
-        DurationVariable _ -> True
+    mconcat
+      [ declare "a window written as something to fill in later is one word" $
+          case duration of
+            DurationVariable variable ->
+              not (Text.null variable)
+                && Text.all (\character -> not (isSpace character) && character /= ']') variable
+            _ -> True,
+        declare "the duration is one Prometheus has somewhere to put" $
+          case duration of
+            Milliseconds n -> n <= 9223372036854
+            Seconds n -> n <= 9223372036
+            Minutes n -> n <= 153722867
+            Hours n -> n <= 2562047
+            Days n -> n <= 106751
+            Weeks n -> n <= 15250
+            Years n -> n <= 292
+            DurationVariable _ -> True
+      ]
 
 -- | A label's name, which Prometheus spells like an identifier.
 --

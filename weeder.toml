@@ -1,11 +1,51 @@
 unused-types = true
 type-class-roots = false
+
+# A library's reason to exist is its API, so the API is the root set: a
+# constructor nothing in this repository names is still one somebody using the
+# library can write.
+#
+# Written out rather than as "^PromQL\\." so that the internals are not rooted
+# too.  With the module prefix as a root, a helper that became dead would go
+# unreported and this check would look like it was doing work it was not.
+# Adding an export means adding it here, which is the same discipline the
+# export list itself is.
 roots = [
   "^Main.main$",
   "^Paths_.*",
-  # The library's whole surface is its reason to exist: a constructor nothing
-  # in this repository names is still one a user of the library can write.
-  "^PromQL\\.",
+
+  # PromQL.Expr: the types, their constructors and their fields.
+  '^PromQL\.Expr\.(Expr|Number|Window|String|Vector|OverTime|QuantileOverTime|Apply|LabelReplace|Aggregate|Binary)$',
+  '^PromQL\.Expr\.(Aggregation|Sum|Average|Minimum|Maximum|Count|CountValues|Group|StandardDeviation|StandardVariance|TopK|BottomK|Quantile)$',
+  '^PromQL\.Expr\.(Grouping|By|Without)$',
+  '^PromQL\.Expr\.(BinOp|Add|Subtract|Multiply|Divide|Modulo|Power|Atan2|Compare|Or|And|Unless)$',
+  '^PromQL\.Expr\.(Comparison|Equal|NotEqual|LessThan|LessOrEqual|GreaterThan|GreaterOrEqual)$',
+  '^PromQL\.Expr\.(Answering|AsAFilter|AsZeroOrOne)$',
+  '^PromQL\.Expr\.(Matching|OnEverything|On|Ignoring)$',
+  '^PromQL\.Expr\.(Call|Absolute|Ceiling|Floor|Exponential|NaturalLog|Log2|Log10|SquareRoot|Sign|Round|Scalar|ConstantVector|ClampBelow|ClampAbove|Clamp|Absent|AbsentOverTime|Timestamp|HistogramQuantile|Sort|SortDescending)$',
+  '^PromQL\.Expr\.(RangeFunction|Rate|InstantRate|Increase|Delta|InstantDelta|Derivative|Changes|Resets|AverageOverTime|MinimumOverTime|MaximumOverTime|SumOverTime|CountOverTime|LastOverTime|PresentOverTime|StandardDeviationOverTime|StandardVarianceOverTime)$',
+  '^PromQL\.Expr\.(RangeVector|Over|Sampled)$',
+  '^PromQL\.Expr\.(Replacement|replacementDestination|replacementText|replacementSource|replacementRegexp)$',
+  '^PromQL\.Expr\.(Selector|selectorMetric|selectorMatchers|selectorOffset)$',
+  '^PromQL\.Expr\.(LabelName|unLabelName|labelName|MetricName|unMetricName|metricName)$',
+  '^PromQL\.Expr\.(Matcher|matcherLabel|matcherMatch)$',
+  '^PromQL\.Expr\.(Match|Is|IsNot|Matches|DoesNotMatch)$',
+  '^PromQL\.Expr\.(Regexp|Literally|AnyOf|StartingWith|Pattern)$',
+  '^PromQL\.Expr\.(Duration|Milliseconds|Seconds|Minutes|Hours|Days|Weeks|Years|DurationVariable)$',
+  '^PromQL\.Expr\.(metric|series|matcherNarrows|regexpNarrows|is|isNot|matching|notMatching)$',
+
+  # PromQL.Render: everything it writes with, and the precedence it writes by.
+  '^PromQL\.Render\.(render|renderFlat|renderBracketed|renderSelector|renderMatcher|renderRegexp|renderDuration|renderNumber|queryWidth)$',
+  '^PromQL\.Render\.(precedence|operatorPrecedence|lowestPrecedence|atomPrecedence)$',
+
+  # PromQL: the umbrella module, which re-exports the two above.
+  '^PromQL\.$',
+
+  # PromQL.E2E.Prometheus: what the end-to-end suite asks Prometheus with.
+  '^PromQL\.E2E\.Prometheus\.(PrometheusUrl|unPrometheusUrl|prometheusUrlFromEnvironment|ParsedQuery|Parsed|Unparseable|wasParsed|parseQuery)$',
+
+  # PromQL.Gen: generators, which only a test suite ever names.
+  '^PromQL\.Gen\.(genIdentifier|genScalar|genInstantVector|genRange|genDurationVariable)$',
 ]
 root-instances = [
   # Exercised by the property tests and by deriving rather than by anything
@@ -15,6 +55,7 @@ root-instances = [
   { class = "Generic" },
   { class = "Show" },
   { class = "Eq" },
+  { class = "Ord" },
   { class = "Enum" },
   { class = "Bounded" },
 ]

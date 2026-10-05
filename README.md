@@ -54,3 +54,23 @@ starts one and asks it:
 
 `promtool promql format` cannot answer the second: it keeps whatever brackets
 it was given.  The `/api/v1/parse_query` endpoint hands back the tree.
+
+### What that does and does not promise
+
+Read the first of those literally: **the generators can write a subset of what
+the types can hold, and it is the generators that know PromQL's type system.**
+`log2` takes an instant vector and will not take a scalar, `clamp_min` takes a
+vector and a scalar in that order, and vector matching is only allowed between
+two vectors.  `Expr` can hold the wrong one of each, `isValid` will say yes,
+and Prometheus will say no.
+
+Making that unrepresentable means indexing `Expr` by what it evaluates to,
+which is a different type and a much larger one.  Until then `PromQL.Gen` is
+where those rules are written down, and an expression built by hand is yours
+to get right.
+
+What `Validity` does decide, and so what the types do promise, is everything
+that is not the type system: the arity of a call, that a name is an
+identifier, that a duration is one Prometheus has room for, that a number is
+not a NaN, and that a selector narrows the series down to something rather
+than asking for all of them.

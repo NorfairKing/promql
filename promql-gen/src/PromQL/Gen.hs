@@ -161,7 +161,7 @@ genScalarArithmetic :: Gen BinOp
 genScalarArithmetic =
   oneof
     [ elements [Add, Subtract, Multiply, Divide, Modulo, Power, Atan2],
-      (`Compare` True) <$> genValid
+      (`Compare` AsZeroOrOne) <$> genValid
     ]
 
 -- | A number a query can carry, which is any but a NaN or an infinity.
@@ -183,6 +183,8 @@ instance GenValid Grouping
 instance GenValid BinOp
 
 instance GenValid Comparison
+
+instance GenValid Answering
 
 instance GenValid Matching
 
@@ -213,19 +215,25 @@ instance GenValid Replacement where
       <*> genValid
   shrinkValid = filter isValid . shrinkValidStructurally
 
--- | A selector Prometheus will take: one with a metric name, or with a
--- matcher that can match something.  A selector of nothing but negative
--- matchers is one it refuses, and nothing in the type says so.
+-- | A selector that narrows the series down to something, which is what
+-- 'Validity' asks of one.
+--
+-- Half of them name a metric and half do not, because a selector with only
+-- labels is how a log stream is picked out and is the half more likely to be
+-- got wrong.
 instance GenValid Selector where
   genValid = do
-    name <- genValid
     matchers <- genValid
-    anchor <- Matcher <$> genValid <*> (Is <$> genIdentifier)
+    narrowing <- genValid `suchThat` matcherNarrows
     offset <- genValid
+    named <- genValid
+    name <- genValid
     pure
       Selector
-        { selectorMetric = Just name,
-          selectorMatchers = anchor : matchers,
+        { selectorMetric = if named then Just name else Nothing,
+          -- The one that narrows goes in whether or not a metric is named, so
+          -- that a named selector's matchers are not all negative either.
+          selectorMatchers = narrowing : matchers,
           selectorOffset = offset
         }
   shrinkValid = filter isValid . shrinkValidStructurally

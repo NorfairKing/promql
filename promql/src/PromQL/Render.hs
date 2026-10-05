@@ -268,13 +268,21 @@ call function arguments = Text.concat [function, "(", Text.intercalate ", " argu
 quoted :: Text -> Text
 quoted value = Text.concat ["\"", escaped value, "\""]
 
--- | A string as PromQL reads one, which is to say with its backslashes and
--- its quotes written as escapes.
+-- | A string as PromQL reads one, which is to say with its backslashes, its
+-- quotes and its line breaks written as escapes.
+--
+-- Prometheus takes a raw tab or carriage return inside a string, so those two
+-- are not what would stop it reading the query.  They are escaped because a
+-- query is read back out of a dashboard's JSON or an alerting rule's YAML,
+-- and a control character sitting raw in either is somebody else's problem
+-- later.
 escaped :: Text -> Text
 escaped = Text.concatMap $ \case
   '\\' -> "\\\\"
   '"' -> "\\\""
   '\n' -> "\\n"
+  '\r' -> "\\r"
+  '\t' -> "\\t"
   character -> Text.singleton character
 
 -- | How tightly an expression holds on to its neighbours, following
@@ -374,10 +382,15 @@ renderBinOp = \case
   Power -> "^"
   Atan2 -> "atan2"
   Compare comparison answering ->
-    Text.concat [renderComparison comparison, if answering then " bool" else ""]
+    Text.concat [renderComparison comparison, renderAnswering answering]
   Or -> "or"
   And -> "and"
   Unless -> "unless"
+
+renderAnswering :: Answering -> Text
+renderAnswering = \case
+  AsAFilter -> ""
+  AsZeroOrOne -> " bool"
 
 renderComparison :: Comparison -> Text
 renderComparison = \case
