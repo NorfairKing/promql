@@ -19,8 +19,35 @@ module PromQL.Expr
     BinOp (..),
     Comparison (..),
     Answering (..),
+    isEqualTo,
+    isNotEqualTo,
+    isLessThan,
+    isAtMost,
+    isGreaterThan,
+    isAtLeast,
     Matching (..),
     Call (..),
+    absolute,
+    roundedUp,
+    roundedDown,
+    roundedTo,
+    exponential,
+    naturalLog,
+    log2,
+    log10,
+    squareRoot,
+    sign,
+    scalar,
+    constantVector,
+    clampBelow,
+    clampAbove,
+    clamp,
+    absent,
+    absentOverTime,
+    timestamp,
+    histogramQuantile,
+    sorted,
+    sortedDescending,
     RangeFunction (..),
     RangeVector (..),
     Replacement (..),
@@ -163,6 +190,30 @@ data Answering
 
 instance Validity Answering
 
+-- | The comparisons that drop the samples which do not compare, which is what
+-- a comparison is for unless it is being used to count.
+--
+-- The other half of the table is 'AsZeroOrOne', and there are no names for
+-- those here: it is the rarer of the two and @Compare GreaterThan
+-- AsZeroOrOne@ says what it does.
+isEqualTo :: BinOp
+isEqualTo = Compare Equal AsAFilter
+
+isNotEqualTo :: BinOp
+isNotEqualTo = Compare NotEqual AsAFilter
+
+isLessThan :: BinOp
+isLessThan = Compare LessThan AsAFilter
+
+isAtMost :: BinOp
+isAtMost = Compare LessOrEqual AsAFilter
+
+isGreaterThan :: BinOp
+isGreaterThan = Compare GreaterThan AsAFilter
+
+isAtLeast :: BinOp
+isAtLeast = Compare GreaterOrEqual AsAFilter
+
 -- | Which labels the two sides of an operator are joined on.
 data Matching
   = -- | The labels both sides carry, which is what an operator does unless
@@ -217,6 +268,81 @@ data Call
   deriving (Show, Eq, Generic)
 
 instance Validity Call
+
+-- | Each function as the expression a call to it is, so that a caller writes
+-- what it is asking for rather than the 'Apply' that puts a 'Call' back into
+-- an 'Expr'.
+--
+-- Named after the constructor rather than after PromQL, which spells four of
+-- these @abs@, @ceil@, @sgn@ and @sort_desc@: the renderer is where the
+-- spellings live, and a name here that shadowed 'Prelude.abs' would be worse
+-- than one that has to be looked up once.
+absolute :: Expr -> Expr
+absolute = Apply . Absolute
+
+-- | PromQL's @ceil@.
+roundedUp :: Expr -> Expr
+roundedUp = Apply . Ceiling
+
+-- | PromQL's @floor@.
+roundedDown :: Expr -> Expr
+roundedDown = Apply . Floor
+
+-- | PromQL's @round@: to the given number of decimal places, or to a whole
+-- number.
+roundedTo :: Expr -> Maybe Expr -> Expr
+roundedTo inner places = Apply (Round inner places)
+
+exponential :: Expr -> Expr
+exponential = Apply . Exponential
+
+naturalLog :: Expr -> Expr
+naturalLog = Apply . NaturalLog
+
+log2 :: Expr -> Expr
+log2 = Apply . Log2
+
+log10 :: Expr -> Expr
+log10 = Apply . Log10
+
+squareRoot :: Expr -> Expr
+squareRoot = Apply . SquareRoot
+
+sign :: Expr -> Expr
+sign = Apply . Sign
+
+scalar :: Expr -> Expr
+scalar = Apply . Scalar
+
+constantVector :: Expr -> Expr
+constantVector = Apply . ConstantVector
+
+clampBelow :: Expr -> Expr -> Expr
+clampBelow inner lower = Apply (ClampBelow inner lower)
+
+clampAbove :: Expr -> Expr -> Expr
+clampAbove inner upper = Apply (ClampAbove inner upper)
+
+clamp :: Expr -> Expr -> Expr -> Expr
+clamp inner lower upper = Apply (Clamp inner lower upper)
+
+absent :: Expr -> Expr
+absent = Apply . Absent
+
+absentOverTime :: RangeVector -> Expr
+absentOverTime = Apply . AbsentOverTime
+
+timestamp :: Expr -> Expr
+timestamp = Apply . Timestamp
+
+histogramQuantile :: Expr -> Expr -> Expr
+histogramQuantile quantile buckets = Apply (HistogramQuantile quantile buckets)
+
+sorted :: Expr -> Expr
+sorted = Apply . Sort
+
+sortedDescending :: Expr -> Expr
+sortedDescending = Apply . SortDescending
 
 data RangeFunction
   = -- | Per-second rate of increase, which is what a counter is read with.
