@@ -1,4 +1,4 @@
-# Mutation-plugin config for promql.
+# Mutation-plugin config for this repository's libraries.
 #
 # Schema: Test.Syd.Mutation.Plugin.OptParse.MutationPluginConfig in the
 # sydtest repo. Wired into nix via the 'configFile' argument of
@@ -8,7 +8,13 @@ debug: true
 
 operators:
   ConstEmptyList:
-    # Every [Char]-typed expression in this library is a piece of a query or
+    # Every [Char]-typed expression in these libraries is a piece of a query or
     # of an error message. The query pieces are asserted by the renderer's
     # tests; the messages are not, and mutating one to "" is noise.
     skip-strings: true
+
+exceptions:
+  # The one module that runs promtool rather than writing text.  The suites
+  # it is mutation-tested against do not run promtool, so its mutants could
+  # only survive; the end-to-end check is what asserts it.
+  - PromQL.Rule.Promtool

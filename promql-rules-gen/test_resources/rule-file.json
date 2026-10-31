@@ -1,0 +1,34 @@
+{
+  "groups": [
+    {
+      "interval": "30s",
+      "name": "site",
+      "rules": [
+        {
+          "alert": "Site Down",
+          "annotations": {
+            "description": "{{ $labels.instance }} has been failing for over 2 minutes",
+            "summary": "A public URL is not answering"
+          },
+          "expr": "probe_success{env=\"production\"} == 0",
+          "for": "2m",
+          "keep_firing_for": "5m",
+          "labels": {
+            "severity": "page"
+          }
+        },
+        {
+          "expr": "min by (env) (probe_success)",
+          "labels": {
+            "aggregation": "min"
+          },
+          "record": "env:probe_success:min"
+        }
+      ]
+    },
+    {
+      "name": "empty",
+      "rules": []
+    }
+  ]
+}

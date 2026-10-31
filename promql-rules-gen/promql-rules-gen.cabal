@@ -1,0 +1,75 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.38.3.
+--
+-- see: https://github.com/sol/hpack
+
+name:           promql-rules-gen
+version:        0.0.0
+synopsis:       Generators and tests for promql-rules
+category:       Monitoring
+homepage:       https://github.com/NorfairKing/promql#readme
+bug-reports:    https://github.com/NorfairKing/promql/issues
+author:         Tom Sydney Kerckhove
+maintainer:     syd@cs-syd.eu
+copyright:      Copyright: (c) 2026 Tom Sydney Kerckhove
+license:        AllRightsReserved
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    CHANGELOG.md
+    test_resources/rule-file-long-expression.json
+    test_resources/rule-file.json
+    test_resources/rule-test-file.json
+
+source-repository head
+  type: git
+  location: https://github.com/NorfairKing/promql
+
+library
+  exposed-modules:
+      PromQL.Rule.Gen
+      PromQL.Rule.Sydtest
+  other-modules:
+      Paths_promql_rules_gen
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wincomplete-record-updates -Wpartial-fields -Widentities -Wredundant-constraints -Wcpp-undef -Wunused-packages
+  build-depends:
+      QuickCheck
+    , base >=4.7 && <5
+    , containers
+    , genvalidity
+    , genvalidity-containers
+    , genvalidity-text
+    , promql
+    , promql-gen
+    , promql-rules
+    , sydtest
+    , text
+  default-language: Haskell2010
+
+test-suite promql-rules-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      PromQL.Rule.TestSpec
+      PromQL.RuleSpec
+      Paths_promql_rules_gen
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wincomplete-record-updates -Wpartial-fields -Widentities -Wredundant-constraints -Wcpp-undef -Wunused-packages -threaded -rtsopts "-with-rtsopts=-N"
+  build-tool-depends:
+      sydtest-discover:sydtest-discover
+  build-depends:
+      aeson
+    , autodocodec
+    , base >=4.7 && <5
+    , containers
+    , genvalidity-sydtest
+    , path
+    , promql
+    , promql-rules
+    , promql-rules-gen
+    , sydtest
+  default-language: Haskell2010

@@ -7,6 +7,9 @@ maintainer: syd@cs-syd.eu
 license: AllRightsReserved
 license-file: LICENSE
 
+extra-source-files:
+- test_resources/**/*
+
 ghc-options:
 - -Wall
 - -Werror
@@ -46,4 +49,9 @@ tests:
     - promql
     - promql-e2e
     - promql-gen
+    - promql-rules
+    - promql-rules-gen
+    - QuickCheck
+    - containers
+    - text
     - sydtest

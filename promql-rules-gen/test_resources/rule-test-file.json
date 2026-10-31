@@ -1,0 +1,56 @@
+{
+  "evaluation_interval": "30s",
+  "rule_files": [
+    "rules.json"
+  ],
+  "tests": [
+    {
+      "alert_rule_test": [
+        {
+          "alertname": "Down",
+          "eval_time": "4m",
+          "exp_alerts": []
+        },
+        {
+          "alertname": "Down",
+          "eval_time": "12m",
+          "exp_alerts": [
+            {
+              "exp_annotations": {
+                "summary": "a is down"
+              },
+              "exp_labels": {
+                "instance": "a",
+                "job": "web",
+                "severity": "page"
+              }
+            }
+          ]
+        }
+      ],
+      "external_labels": {
+        "cluster": "eu"
+      },
+      "input_series": [
+        {
+          "series": "up{instance=\"a\", job=\"web\"}",
+          "values": "1x4 0x9 _x2 stale"
+        }
+      ],
+      "interval": "1m",
+      "name": "the web server goes down",
+      "promql_expr_test": [
+        {
+          "eval_time": "2m",
+          "exp_samples": [
+            {
+              "labels": "{}",
+              "value": 1
+            }
+          ],
+          "expr": "sum (up)"
+        }
+      ]
+    }
+  ]
+}

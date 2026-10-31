@@ -18,8 +18,15 @@ let
   '';
 in
 haskell.lib.overrideCabal (haskell.lib.doCheck promql-e2e) (old: {
-  testToolDepends = (old.testToolDepends or [ ]) ++ [ prometheus ];
+  # promtool is packaged apart from the server: the health check below and
+  # the rule tests both run it.
+  testToolDepends = (old.testToolDepends or [ ]) ++ [ prometheus prometheus.cli ];
   preCheck = (old.preCheck or "") + ''
+    # The Haskell builder sets a UTF-8 locale, and a test suite that uses
+    # these packages might not have one, so the suite runs without one to
+    # find out whether text that is not ASCII still comes back from promtool.
+    export LC_ALL=C
+
     prometheusPort=9090
     prometheusStorage="$TMPDIR/prometheus"
     mkdir -p "$prometheusStorage"

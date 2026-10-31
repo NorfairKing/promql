@@ -2,3 +2,5 @@ packages:
   promql/
   promql-gen/
   promql-e2e/
+  promql-rules/
+  promql-rules-gen/

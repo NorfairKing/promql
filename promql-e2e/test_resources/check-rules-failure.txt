@@ -1,0 +1,3 @@
+Checking rules.json
+  FAILED:
+rules.json: group "templates", rule 1, "Instance Down": annotation "summary": template: __alert_Instance Down:1: unclosed action

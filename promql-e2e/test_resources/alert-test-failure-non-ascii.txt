@@ -1,0 +1,11 @@
+
+
+  FAILED:
+    name: an instance goes down,
+    alertname: Café Down, time: 8m, 
+        exp:[
+            0:
+              Labels:{alertname="Café Down", instance="a", job="web", severity="page"}
+              Annotations:{summary="a is down"}
+            ], 
+        got:[]

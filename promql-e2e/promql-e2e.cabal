@@ -13,6 +13,10 @@ maintainer:     syd@cs-syd.eu
 license:        AllRightsReserved
 license-file:   LICENSE
 build-type:     Simple
+extra-source-files:
+    test_resources/alert-test-failure-non-ascii.txt
+    test_resources/alert-test-failure.txt
+    test_resources/check-rules-failure.txt
 
 library
   exposed-modules:
@@ -36,7 +40,9 @@ test-suite promql-e2e-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      PromQL.E2E.ReadmeSpec
       PromQL.E2E.RenderSpec
+      PromQL.E2E.RuleSpec
       Paths_promql_e2e
   hs-source-dirs:
       test
@@ -44,11 +50,16 @@ test-suite promql-e2e-test
   build-tool-depends:
       sydtest-discover:sydtest-discover
   build-depends:
-      base >=4.7 && <5
+      QuickCheck
+    , base >=4.7 && <5
+    , containers
     , genvalidity-sydtest
     , http-client
     , promql
     , promql-e2e
     , promql-gen
+    , promql-rules
+    , promql-rules-gen
     , sydtest
+    , text
   default-language: Haskell2010

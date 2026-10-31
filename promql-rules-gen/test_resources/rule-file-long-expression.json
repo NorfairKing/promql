@@ -1,0 +1,13 @@
+{
+  "groups": [
+    {
+      "name": "long",
+      "rules": [
+        {
+          "expr": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n  / aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "record": "long"
+        }
+      ]
+    }
+  ]
+}

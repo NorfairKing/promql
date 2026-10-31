@@ -7,6 +7,7 @@
 -- ask it.
 module PromQL.E2E.RenderSpec (spec) where
 
+import qualified Data.Text as Text
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import PromQL
 import PromQL.E2E.Prometheus
@@ -65,6 +66,24 @@ spec =
       -- envelope that carries one would go unread.  A refusal that failed to
       -- decode now throws rather than coming back, so this is what keeps a
       -- rejected query reading as a rejected query.
+      -- Both sides of the brackets property write a negative number the
+      -- same way, so that property cannot see where its minus goes.
+      it "raises a negative number to a power rather than negating the power" $ \(manager, prometheus) -> do
+        rendered <- parseQuery manager prometheus (render (Binary Power OnEverything (Number (-1)) (Number 2)))
+        meant <- parseQuery manager prometheus "(-1) ^ 2"
+        rendered `shouldSatisfy` wasParsed
+        rendered `shouldBe` meant
+
+      -- Generated expressions are rarely long enough to be laid out with a
+      -- power on the left of a power, so this one is written down.
+      it "keeps the brackets of a power raised to a power when laying it out" $ \(manager, prometheus) -> do
+        let long = Vector (metric (MetricName (Text.replicate 60 "a")))
+        let expr = Binary Power OnEverything (Binary Power OnEverything long long) (Number 2)
+        laidOut <- parseQuery manager prometheus (render expr)
+        flat <- parseQuery manager prometheus (renderFlat expr)
+        laidOut `shouldSatisfy` wasParsed
+        laidOut `shouldBe` flat
+
       it "brings back what Prometheus said was wrong rather than throwing" $ \(manager, prometheus) -> do
         -- Well formed, and refused: log2 takes an instant vector.
         refused <- parseQuery manager prometheus (render (Apply (Log2 (Number 2))))

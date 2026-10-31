@@ -16,6 +16,8 @@ final: prev:
       {
         promql = strictly (self.callPackage ../promql { });
         promql-gen = strictly (self.callPackage ../promql-gen { });
+        promql-rules = strictly (self.callPackage ../promql-rules { });
+        promql-rules-gen = strictly (self.callPackage ../promql-rules-gen { });
         # The one package built differently, and only because its suite asks a
         # Prometheus that nothing outside this repository's own check starts.
         promql-e2e = final.haskell.lib.dontCheck (strictly (self.callPackage ../promql-e2e { }));

@@ -58,8 +58,8 @@
       };
       # The packages this repository has, which the checks below are made
       # one per.  A list rather than something read out of the overlay,
-      # because the overlay is three callPackage lines and nothing else.
-      packageNames = [ "promql" "promql-gen" "promql-e2e" ];
+      # because the overlay is a callPackage line per package and nothing else.
+      packageNames = [ "promql" "promql-gen" "promql-rules" "promql-rules-gen" "promql-e2e" ];
       promqlPackages =
         builtins.listToAttrs (map
           (name: { inherit name; value = pkgs.haskellPackages.${name}; })
@@ -76,16 +76,16 @@
         # The other way round, a new one is left out until somebody remembers
         # a list over here, and nothing says they forgot.
         #
-        # promql-e2e is what asks a Prometheus whether the other two are
-        # right.  It is this repository's own business and nobody would depend
-        # on it.
+        # promql-e2e is what asks Prometheus and promtool whether the other
+        # packages are right.  It is this repository's own business and nobody
+        # would depend on it.
         release-to-hackage = release-to-hackage.lib.${system}.makeHackageRelease {
           packages = removeAttrs promqlPackages [ "promql-e2e" ];
         };
       } // promqlPackages;
 
       checks.${system} = {
-        inherit (pkgs.haskellPackages) promql promql-gen promql-e2e;
+        inherit (pkgs.haskellPackages) promql promql-gen promql-rules promql-rules-gen promql-e2e;
         pre-commit = pre-commit-hooks.lib.${system}.run {
           src = ./.;
           hooks = {
@@ -164,20 +164,52 @@
         };
         coverage-report = pkgs.dekking.makeCoverageReport {
           name = "promql-coverage-report";
-          packages = [ "promql" ];
-          coverage = [ "promql-gen" ];
-          # The renderer is what the suite is about, so anything much below
+          packages = [ "promql" "promql-rules" ];
+          coverage = [ "promql-gen" "promql-rules-gen" ];
+          # Rendering is what both suites are about, so anything much below
           # this means a case went in without a test.
           threshold = 80; # %
         };
-        # Every mutation of the renderer should be caught: it is a pure
-        # function over a small type, with a suite that asserts the text.
+        # Every mutation of the renderers should be caught: they are pure
+        # functions over small types, with suites that assert the text.
+        #
+        # Each library is mutated against its own suite only.
+        # The rules suite reaches the parser and the renderer too, but only
+        # through the codecs, so running it for every mutation of those took
+        # seconds a mutation and killed none that the library's own suite
+        # did not.
         mutation = pkgs.haskellPackages.sydtest.mutationCheck {
           name = "mutation-promql";
           configFile = ./mutation.yaml;
           libraries = [ "promql" ];
           tests = [ "promql-gen" ];
+          # A mutation can make a test allocate without end, and it is killed
+          # when it runs out of heap: the lower the limit, the sooner.
+          # The suites run in far less than this.
+          testProcessMemLimit = "1g";
+          coverageJobs = 16;
         };
+        mutation-rules = pkgs.haskellPackages.sydtest.mutationCheck {
+          name = "mutation-promql-rules";
+          configFile = ./mutation.yaml;
+          libraries = [ "promql-rules" ];
+          tests = [ "promql-rules-gen" ];
+          testProcessMemLimit = "1g";
+          coverageJobs = 16;
+        };
+        # The README's example is a module of the end-to-end suite, from its
+        # imports down, so that the example is compiled and run.  This is what
+        # keeps the two the same text.
+        readme-example-check = pkgs.runCommand "readme-example-check" { } ''
+          awk '/^```haskell$/ { inBlock = 1; next } /^```$/ { inBlock = 0 } inBlock' \
+            ${./README.md} > readme.hs
+          sed -n '/^import /,$p' ${./promql-e2e/test/PromQL/E2E/ReadmeSpec.hs} > spec.hs
+          if ! diff -u spec.hs readme.hs; then
+            echo "The README's example differs from promql-e2e/test/PromQL/E2E/ReadmeSpec.hs."
+            exit 1
+          fi
+          touch $out
+        '';
         # The one check that asks Prometheus rather than us.  Here rather
         # than in the overlay: it is this repository's own harness, and
         # nothing importing the overlay should be handed it.
