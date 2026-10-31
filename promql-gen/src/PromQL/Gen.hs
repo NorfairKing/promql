@@ -241,14 +241,13 @@ instance GenValid Matcher
 
 -- | A value a matcher can carry, which is text Prometheus can read back.
 --
--- Arbitrary Text can hold a lone surrogate, which is not a character any
--- UTF-8 encoding of the query can carry, and the server answers "invalid
--- UTF-8 rune" rather than anything about the query.
+-- Prometheus refuses U+FFFD in a query, which is also what Text makes of a
+-- lone surrogate, so neither is generated (see 'PromQL.validateQueryText').
 genQueryText :: Gen Text
 genQueryText = Text.pack <$> genListOf (genValid `suchThat` isSafeCharacter)
   where
     isSafeCharacter character =
-      character /= '\\' && not (isSurrogate character)
+      character /= '\\' && character /= '\xFFFD' && not (isSurrogate character)
     isSurrogate character =
       let point = fromEnum character
        in point >= 0xD800 && point <= 0xDFFF

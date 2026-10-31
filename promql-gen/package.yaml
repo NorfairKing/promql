@@ -46,6 +46,10 @@ tests:
     - '"-with-rtsopts=-N"'
     dependencies:
     - QuickCheck
+    - aeson
+    - containers
+    - megaparsec
+    - autodocodec
     - genvalidity-sydtest
     - promql
     - promql-gen

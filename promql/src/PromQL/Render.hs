@@ -89,16 +89,17 @@ layOut column context expr
   | column + Text.length flat <= queryWidth = flat
   | otherwise = case shapeOf expr of
       -- Nothing to give way at: a selector is as long as its labels make it.
-      Opaque text -> text
+      -- Brackets all the same, which a negative number can need.
+      Opaque text -> Text.concat [opening, text, closing]
       Operator operator matchOn left right ->
         let joint = Text.concat [renderBinOp operator, renderMatching matchOn]
          in Text.concat
               [ opening,
-                layOut inner (precedence expr) left,
+                layOut inner (sideContext operator LeftSide) left,
                 newlineAt (inner + 2),
                 joint,
                 " ",
-                layOut (inner + 2 + Text.length joint + 1) (precedence expr + 1) right,
+                layOut (inner + 2 + Text.length joint + 1) (sideContext operator RightSide) right,
                 closing
               ]
       -- Brackets are not this branch's business: what is written around a
@@ -290,6 +291,12 @@ escaped = Text.concatMap $ \case
 precedence :: Expr -> Word
 precedence = \case
   Binary operator _ _ _ -> operatorPrecedence operator
+  -- Prometheus reads the minus of a negative number as an operator that
+  -- binds less tightly than exponentiation, so -1 ^ 2 is -(1 ^ 2).
+  -- Binding as tightly as exponentiation does is what brackets one on the left
+  -- of it and nowhere else, which is the one place the minus would come apart
+  -- from its number.
+  Number x | x < 0 -> operatorPrecedence Power
   -- Everything else is a name, a number, or something with its own brackets
   -- around it, and nothing can come between its parts.
   Number _ -> atomPrecedence

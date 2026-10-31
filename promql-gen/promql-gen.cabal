@@ -44,7 +44,9 @@ test-suite promql-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      PromQL.CodecSpec
       PromQL.ExprSpec
+      PromQL.ParseSpec
       PromQL.RenderSpec
       Paths_promql_gen
   hs-source-dirs:
@@ -54,8 +56,12 @@ test-suite promql-test
       sydtest-discover:sydtest-discover
   build-depends:
       QuickCheck
+    , aeson
+    , autodocodec
     , base >=4.7 && <5
+    , containers
     , genvalidity-sydtest
+    , megaparsec
     , promql
     , promql-gen
     , sydtest

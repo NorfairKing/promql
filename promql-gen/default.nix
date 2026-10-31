@@ -1,6 +1,6 @@
-{ mkDerivation, base, genvalidity, genvalidity-sydtest
-, genvalidity-text, lib, promql, QuickCheck, sydtest
-, sydtest-discover, text
+{ mkDerivation, aeson, autodocodec, base, containers, genvalidity
+, genvalidity-sydtest, genvalidity-text, lib, megaparsec, promql
+, QuickCheck, sydtest, sydtest-discover, text
 }:
 mkDerivation {
   pname = "promql-gen";
@@ -10,7 +10,8 @@ mkDerivation {
     base genvalidity genvalidity-text promql QuickCheck text
   ];
   testHaskellDepends = [
-    base genvalidity-sydtest promql QuickCheck sydtest text
+    aeson autodocodec base containers genvalidity-sydtest megaparsec
+    promql QuickCheck sydtest text
   ];
   testToolDepends = [ sydtest-discover ];
   homepage = "https://github.com/NorfairKing/promql#readme";

@@ -14,6 +14,7 @@
 -- selectors and its matchers, including how it reads a backslash.
 module PromQL.Expr
   ( Expr (..),
+    validateQueryText,
     Aggregation (..),
     Grouping (..),
     BinOp (..),
@@ -71,7 +72,7 @@ module PromQL.Expr
   )
 where
 
-import Data.Char (isAsciiLower, isAsciiUpper, isDigit, isSpace)
+import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (isJust)
@@ -114,11 +115,24 @@ instance Validity Expr where
       [ genericValidate expr,
         case expr of
           Number x -> validateQueryNumber x
+          String text -> validateQueryText text
           _ -> valid
       ]
 
 validateQueryNumber :: Double -> Validation
 validateQueryNumber x = mconcat [validateNotNaN x, validateNotInfinite x]
+
+-- | Text that Prometheus reads back out of a query as itself.
+--
+-- Prometheus refuses a query with U+FFFD in a string, with "invalid UTF-8
+-- rune", because that is the rune Go decodes an invalid byte to and its lexer
+-- does not tell the two apart.
+-- It is also what 'Text' makes of a lone surrogate, so text that came from
+-- outside can hold one without anybody having written it.
+validateQueryText :: Text -> Validation
+validateQueryText text =
+  declare "the text holds no U+FFFD, which Prometheus refuses in a query" $
+    not (Text.any (== '\xFFFD') text)
 
 data Aggregation
   = Sum
@@ -391,7 +405,12 @@ data Replacement = Replacement
   }
   deriving (Show, Eq, Generic)
 
-instance Validity Replacement
+instance Validity Replacement where
+  validate replacement =
+    mconcat
+      [ genericValidate replacement,
+        validateQueryText (replacementText replacement)
+      ]
 
 -- | The series a query is about.
 data Selector = Selector
@@ -481,7 +500,16 @@ data Match
   | DoesNotMatch !Regexp
   deriving (Show, Eq, Generic)
 
-instance Validity Match
+instance Validity Match where
+  validate match =
+    mconcat
+      [ genericValidate match,
+        case match of
+          Is text -> validateQueryText text
+          IsNot text -> validateQueryText text
+          Matches _ -> valid
+          DoesNotMatch _ -> valid
+      ]
 
 is :: LabelName -> Text -> Matcher
 is label value =
@@ -533,7 +561,12 @@ data Regexp
     Pattern !Text
   deriving (Show, Eq, Generic)
 
-instance Validity Regexp
+instance Validity Regexp where
+  validate = \case
+    Literally text -> validateQueryText text
+    AnyOf texts -> foldMap validateQueryText texts
+    StartingWith text -> validateQueryText text
+    Pattern text -> validateQueryText text
 
 -- | A window of time, as PromQL writes one.
 data Duration
@@ -559,11 +592,11 @@ data Duration
 instance Validity Duration where
   validate duration =
     mconcat
-      [ declare "a window written as something to fill in later is one word" $
+      [ declare "a window written as something to fill in later is a dollar and a name" $
           case duration of
-            DurationVariable variable ->
-              not (Text.null variable)
-                && Text.all (\character -> not (isSpace character) && character /= ']') variable
+            DurationVariable variable -> case Text.uncons variable of
+              Just ('$', name) -> not (Text.null name) && Text.all continuesName name
+              _ -> False
             _ -> True,
         declare "the duration is one Prometheus has somewhere to put" $
           case duration of

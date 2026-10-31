@@ -29,6 +29,10 @@ dependencies:
 library:
   source-dirs: src
   dependencies:
+  - autodocodec
+  - bytestring
+  - megaparsec
+  - scientific
   - text
   - validity
   - validity-text

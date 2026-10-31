@@ -8,6 +8,7 @@ import qualified Data.Text as Text
 import PromQL
 import qualified PromQL.Expr as Expr
 import PromQL.Gen ()
+import PromQL.Parse (parseExpr)
 import Test.QuickCheck (forAll, suchThat)
 import Test.Syd
 import Test.Syd.Validity
@@ -63,6 +64,32 @@ spec = do
     it "leaves out the brackets a reader of the grammar would put in anyway" $
       render (Binary Add OnEverything a (Binary Multiply OnEverything b c))
         `shouldBe` "a + b * c"
+
+    -- Prometheus reads a leading minus as an operator that binds less
+    -- tightly than exponentiation, so -1 ^ 2 is -(1 ^ 2).
+    it "brackets a negative number that is raised to a power, and only then" $
+      map
+        render
+        [ Binary Power OnEverything (Number (-1)) two,
+          Binary Power OnEverything two (Number (-1)),
+          Binary Multiply OnEverything (Number (-1)) two,
+          Binary Add OnEverything two (Number (-1)),
+          Binary Power OnEverything (Number 0) two,
+          Binary Power OnEverything (Number 0.5) two
+        ]
+        `shouldBe` ["(-1) ^ 2", "2 ^ -1", "-1 * 2", "2 + -1", "0 ^ 2", "0.5 ^ 2"]
+
+    -- Exponentiation associates to the right, so a power on its left needs
+    -- brackets, and laying it out across lines must not lose them.
+    it "brackets a power raised to a power, across lines as on one" $
+      let long = Vector (metric (MetricName (Text.replicate 60 "a")))
+          exprs =
+            [ Binary Power OnEverything (Binary Power OnEverything long long) two,
+              Binary Add OnEverything long (Binary Add OnEverything long (Binary Power OnEverything (Number (-2)) long)),
+              -- A number too long for a line is still a negative number.
+              Binary Power OnEverything (Number (-1e120)) two
+            ]
+       in map (parseExpr . render) exprs `shouldBe` map Right exprs
 
     it "brackets a sum that is divided" $
       render (Binary Divide OnEverything (Binary Add OnEverything a b) c)
@@ -424,6 +451,10 @@ spec = do
       render (Binary Divide OnEverything (wide 53) (wide 55))
         `shouldBe` Text.concat [as 53, "\n  / ", as 55]
 
+    it "brackets a right-hand side that fits only as the operator beside it needs" $
+      render (Binary Add OnEverything (wide 53) (Binary Multiply OnEverything (wide 30) (wide 30)))
+        `shouldBe` Text.concat [as 53, "\n  + ", as 30, " * ", as 30]
+
     -- The right-hand side is laid out from the column its operator left it
     -- at, so this pins the operator's width and the spaces either side of it
     -- as well as the two-space indent.
@@ -496,6 +527,33 @@ spec = do
 
     it "takes a window written as something to fill in later" $
       isValid (DurationVariable "$__rate_interval") `shouldBe` True
+
+    -- Prometheus reads U+FFFD inside a string as the rune Go decodes an
+    -- invalid byte to, and refuses the query with "invalid UTF-8 rune".
+    -- It is also what Text makes of a lone surrogate.
+    it "refuses the replacement character wherever a query holds text" $
+      let up = metric (MetricName "up")
+          replaced = "a\xFFFD"
+       in map
+            isValid
+            [ String replaced,
+              Vector up {selectorMatchers = [LabelName "job" `is` replaced]},
+              Vector up {selectorMatchers = [LabelName "job" `isNot` replaced]},
+              Vector up {selectorMatchers = [LabelName "job" `matching` Literally replaced]},
+              Vector up {selectorMatchers = [LabelName "job" `matching` AnyOf ("a" :| [replaced])]},
+              Vector up {selectorMatchers = [LabelName "job" `matching` StartingWith replaced]},
+              Vector up {selectorMatchers = [LabelName "job" `matching` Pattern replaced]},
+              LabelReplace
+                (Vector up)
+                Replacement
+                  { replacementDestination = LabelName "a",
+                    replacementText = replaced,
+                    replacementSource = LabelName "b",
+                    replacementRegexp = Pattern "(.*)"
+                  },
+              String "a\x1F600"
+            ]
+            `shouldBe` [False, False, False, False, False, False, False, False, True]
 
     it "takes a label name that is an identifier" $
       map (isValid . LabelName) ["a", "_", "A", "a_B9", "_0"]
@@ -848,6 +906,16 @@ spec = do
         )
         `shouldBe` False
 
+    it "refuses a label replacement whose label name is not one" $
+      isValid
+        Replacement
+          { replacementDestination = LabelName "0a",
+            replacementText = "x",
+            replacementSource = LabelName "b",
+            replacementRegexp = Literally "x"
+          }
+        `shouldBe` False
+
     it "refuses an expression holding a window that is too long" $
       isValid (OverTime Rate (Over (metric (MetricName "a")) (Years 293)))
         `shouldBe` False
@@ -1020,14 +1088,18 @@ spec = do
   -- A window written as something to fill in later is the one thing that
   -- reaches the query without being looked at, so what it may hold is the one
   -- thing that has to be.
-  describe "a duration variable is one word" $ do
-    it "takes a variable that is one word" $
-      map (isValid . DurationVariable) ["$__rate_interval", "$__auto", "x"]
-        `shouldBe` [True, True, True]
+  --
+  -- A dollar and a name, which is how Grafana writes one, because anything
+  -- else could read back as some other part of a query: a name as a metric,
+  -- a colon as a subquery's step, a plus as an addition.
+  describe "a duration variable is a dollar and a name" $ do
+    it "takes a dollar and a name" $
+      map (isValid . DurationVariable) ["$__rate_interval", "$__auto", "$interval", "$5m"]
+        `shouldBe` [True, True, True, True]
 
-    it "refuses a variable that is empty, spaced, or closes the bracket" $
-      map (isValid . DurationVariable) ["", "a b", "a\tb", "a]b", "a\nb"]
-        `shouldBe` [False, False, False, False, False]
+    it "refuses anything else" $
+      map (isValid . DurationVariable) ["", "x", "$", "a b", "$a]b", "$a\nb", "$a+b", "$a:b", "$$a"]
+        `shouldBe` [False, False, False, False, False, False, False, False, False]
 
   describe "a string is written so it can be read back" $ do
     let valueOf text =

@@ -26,7 +26,9 @@ source-repository head
 library
   exposed-modules:
       PromQL
+      PromQL.Codec
       PromQL.Expr
+      PromQL.Parse
       PromQL.Render
   other-modules:
       Paths_promql
@@ -34,7 +36,11 @@ library
       src
   ghc-options: -Wall -Werror -Wincomplete-uni-patterns -Wincomplete-record-updates -Wpartial-fields -Widentities -Wredundant-constraints -Wcpp-undef -Wunused-packages
   build-depends:
-      base >=4.7 && <5
+      autodocodec
+    , base >=4.7 && <5
+    , bytestring
+    , megaparsec
+    , scientific
     , text
     , validity
     , validity-text
