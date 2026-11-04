@@ -1115,8 +1115,14 @@ spec = do
     -- query.  A query is read back out of a dashboard's JSON and an alerting
     -- rule's YAML, where a raw control character is somebody else's problem.
     it "escapes the control characters rather than passing them through" $
-      map valueOf ["a\nb", "a\rb", "a\tb"]
-        `shouldBe` ["a{l=\"a\\nb\"}", "a{l=\"a\\rb\"}", "a{l=\"a\\tb\"}"]
+      map valueOf ["a\nb", "a\rb", "a\tb", "a\x01\&b", "a\x7f\&b", "a\x9b\&b"]
+        `shouldBe` [ "a{l=\"a\\nb\"}",
+                     "a{l=\"a\\rb\"}",
+                     "a{l=\"a\\tb\"}",
+                     "a{l=\"a\\u0001b\"}",
+                     "a{l=\"a\\u007fb\"}",
+                     "a{l=\"a\\u009bb\"}"
+                   ]
 
   describe "a comparison says what it answers with" $
     it "writes the bool modifier only where it was asked for" $

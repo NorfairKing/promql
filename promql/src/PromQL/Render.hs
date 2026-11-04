@@ -25,9 +25,11 @@ module PromQL.Render
   )
 where
 
+import Data.Char (isControl, ord)
 import qualified Data.List.NonEmpty as NE
 import Data.Text (Text)
 import qualified Data.Text as Text
+import Numeric (showHex)
 import PromQL.Expr
 
 -- | An expression as PromQL reads it, over as many lines as it takes.
@@ -284,7 +286,10 @@ escaped = Text.concatMap $ \case
   '\n' -> "\\n"
   '\r' -> "\\r"
   '\t' -> "\\t"
-  character -> Text.singleton character
+  -- Every other control character fits in four hex digits.
+  character
+    | isControl character -> Text.concat ["\\u", Text.justifyRight 4 '0' (Text.pack (showHex (ord character) ""))]
+    | otherwise -> Text.singleton character
 
 -- | How tightly an expression holds on to its neighbours, following
 -- Prometheus's own table.  A larger number binds more tightly.
