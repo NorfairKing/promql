@@ -39,6 +39,7 @@ spec = do
             absent a,
             absentOverTime window,
             timestamp a,
+            time,
             histogramQuantile two a,
             sorted a,
             sortedDescending a
@@ -64,6 +65,7 @@ spec = do
                 Absent a,
                 AbsentOverTime window,
                 Timestamp a,
+                Time,
                 HistogramQuantile two a,
                 Sort a,
                 SortDescending a

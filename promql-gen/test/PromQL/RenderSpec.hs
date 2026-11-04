@@ -216,6 +216,7 @@ spec = do
           Absent a,
           AbsentOverTime window,
           Timestamp a,
+          Time,
           HistogramQuantile two a,
           Sort a,
           SortDescending a
@@ -239,6 +240,7 @@ spec = do
                      "absent(a)",
                      "absent_over_time(a[5m])",
                      "timestamp(a)",
+                     "time()",
                      "histogram_quantile(2, a)",
                      "sort(a)",
                      "sort_desc(a)"

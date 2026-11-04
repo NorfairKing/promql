@@ -46,6 +46,7 @@ module PromQL.Expr
     absent,
     absentOverTime,
     timestamp,
+    time,
     histogramQuantile,
     sorted,
     sortedDescending,
@@ -274,6 +275,8 @@ data Call
   | Absent !Expr
   | AbsentOverTime !RangeVector
   | Timestamp !Expr
+  | -- | The time the expression is evaluated at, in seconds since the epoch.
+    Time
   | -- | The quantile a histogram's buckets put a reading at, which takes the
     -- buckets grouped by @le@.
     HistogramQuantile !Expr !Expr
@@ -348,6 +351,9 @@ absentOverTime = Apply . AbsentOverTime
 
 timestamp :: Expr -> Expr
 timestamp = Apply . Timestamp
+
+time :: Expr
+time = Apply Time
 
 histogramQuantile :: Expr -> Expr -> Expr
 histogramQuantile quantile buckets = Apply (HistogramQuantile quantile buckets)

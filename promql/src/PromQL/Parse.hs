@@ -564,6 +564,7 @@ calls =
         ),
         ("absent", one Absent),
         ("timestamp", one Timestamp),
+        ("time", \case [] -> Just Time; _ -> Nothing),
         ("histogram_quantile", two HistogramQuantile),
         ("sort", one Sort),
         ("sort_desc", one SortDescending)

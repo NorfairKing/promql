@@ -375,6 +375,7 @@ callParts = \case
   Absent inner -> ("absent", [Nested inner])
   AbsentOverTime rangeVector -> ("absent_over_time", [Given (renderRangeVector rangeVector)])
   Timestamp inner -> ("timestamp", [Nested inner])
+  Time -> ("time", [])
   HistogramQuantile quantile buckets -> ("histogram_quantile", [Nested quantile, Nested buckets])
   Sort inner -> ("sort", [Nested inner])
   SortDescending inner -> ("sort_desc", [Nested inner])

@@ -188,12 +188,14 @@ spec = do
             "Binary Multiply OnEverything (Number Infinity) (Number 2.0)"
           ]
 
-    it "reads an aggregation and a function that a generated query seldom holds" $
-      map parseExpr ["stdvar(a)", "clamp_max(a, 1)"]
+    it "reads an aggregation and functions that a generated query seldom holds" $
+      map parseExpr ["stdvar(a)", "clamp_max(a, 1)", "round(a, 2)", "time()"]
         `shouldBe` map
           Right
           [ Aggregate StandardVariance Nothing a,
-            Apply (ClampAbove a (Number 1))
+            Apply (ClampAbove a (Number 1)),
+            Apply (Round a (Just (Number 2))),
+            Apply Time
           ]
 
     it "reads a hexadecimal number up to where its digits end" $
@@ -252,6 +254,7 @@ spec = do
               "histogram_count(x)",
               "rate(x)",
               "abs(x[5m])",
+              "time(x)",
               "x offset 5m [1h]",
               "sum(x[5m])",
               "\"\\ud800\"",
@@ -277,6 +280,7 @@ spec = do
                 (0, UnknownFunction "histogram_count"),
                 (0, WrongArguments "rate"),
                 (0, WrongArguments "abs"),
+                (0, WrongArguments "time"),
                 (12, OffsetBeforeWindow),
                 (4, RangeOutsideFunction),
                 (7, EscapeNotACharacter),

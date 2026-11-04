@@ -47,11 +47,12 @@ genScalar :: Gen Expr
 genScalar =
   sized $ \size ->
     if size <= 1
-      then oneof [Number <$> genQueryNumber, Window <$> genValid]
+      then oneof [Number <$> genQueryNumber, Window <$> genValid, pure (Apply Time)]
       else
         oneof
           [ Number <$> genQueryNumber,
             Window <$> genValid,
+            pure (Apply Time),
             Apply . Scalar <$> half genInstantVector,
             Binary
               <$> genScalarArithmetic
